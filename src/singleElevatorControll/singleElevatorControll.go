@@ -3,7 +3,7 @@ package singleelevatorcontroll
 import (
 	"fmt"
 
-	"../src/elevio"
+	"elevatorproject/src/elevio"
 )
 
 func main(){

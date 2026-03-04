@@ -1,3 +1,4 @@
+package orderdistributor
 // Denne modulen kjører bare på master.
 // Den skal holde styr på hvilken heis som skal ta hvilken ordre.
 // Den skal få inn nye ordre fra orderManager, regne ut hvem som skal ta hvilken ordre og sende det videre til de andre heisene

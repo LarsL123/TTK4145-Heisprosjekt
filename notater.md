@@ -29,7 +29,6 @@
  *Hmm*
 
 
-
 ## Hvordan designe ifølge sverre
 **Motivating project discussion: Sverres Design Process**
 1. Brainstorm for Use Cases: Span functionality space; do not aim for

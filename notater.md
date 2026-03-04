@@ -1,5 +1,35 @@
 ## Notater
 
+## Plan for hvem som progger hva (Per 26.02.26)
+ * Brage tar OrderHandler
+ * Daniel tar elevatorManager og kan prøve å lage et slags reelection system, kan prøve å titte på network i den sammenhengen.
+ * Lars hva vil du sjef?
+
+## Tilbakemelding fra Sverre:
+* Main challenge of primary-backup is configuring and reconfiguring the system
+
+* How are we selecting primary and backup?\
+ *Men ja dette må vi finne ut av*
+
+ * Even the slaves send all data?\
+ *No, slaves should only send new orders. And completed orders.*
+
+ * Are you storing to disk?\
+ *I guess no? I alle fall er local-storage veldig nedprioritert.*
+
+ * You are making your own ack protocol?\
+ *Ehh, idk, noen må jo si ifra at både primary og backupen har fått med seg alt.*
+
+
+ * Make a /module/ configuring the system. Sending and receiving the
+   heartbeats, and connecting/disconnecting the comm links, keeping
+   track of primary and backup states, etc?\
+   *I guess det er Peers og Reelection?*
+ * Just use TCP for the rest, and send changes?\
+ *Hmm*
+
+
+
 ## Hvordan designe ifølge sverre
 **Motivating project discussion: Sverres Design Process**
 1. Brainstorm for Use Cases: Span functionality space; do not aim for

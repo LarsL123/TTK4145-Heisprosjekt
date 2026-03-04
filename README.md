@@ -6,8 +6,8 @@ TTK4145 main page [here](https://github.com/TTK4145).
 Project recources [here](https://github.com/TTK4145/Project-resources).
 
 ### Hvordan bruke git boys:
-Husk å bruke pull hver gang dere før dere begynnr å jobbe.
+Husk å `git pull` før dere begynner å jobbe.
 Deretter bytt branch med git checkout mybranch
 
 
-## Husk at Storforbokstav på funksjoner betyr public litenforbokstav er private :)
+## Husk at Storforbokstav på funksjoner betyr public, litenforbokstav er private :)

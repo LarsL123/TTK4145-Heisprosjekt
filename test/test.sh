@@ -1,31 +1,36 @@
 #!/bin/sh
-# To make runnable in Linux run: chmod +x myscript.sh
-# Goal: Make a test script that runs up to 3 elevators allowing us to test everything locally. 
+# Run up to 3 elevators + driver for local testing
+
+PORTS="15657" #PORTS="15657 15658 15659"
 
 echo "Kjører test!"
+echo $PORTS
 
 cleanup() {
-    echo "Test stopped. Killing gnome-termoinals..."
-
+    echo "Test stopped. Killing servers and drivers..."
+    # pkill -f SimElevatorServer
+    # pkill -f "go run main.go"
     pkill gnome-terminal
-    # rm -rf build
+    exit 0
 }
 
 trap cleanup EXIT INT TERM
 
-# gnome-terminal -- bash -c "./server/SimElevatorServer; exec bash" &
+# Start elevators in separate terminals
+for port in $PORTS; do
+    gnome-terminal -- bash -c "echo 'Heis-$port'; ./SimElevatorServer --port=$port; exec bash" &
+done
 
-gnome-terminal -- bash -c "echo "Heis-1"; ./SimElevatorServer --port=15657; exec bash"
 sleep 0.2
-gnome-terminal -- bash -c "cd ../driver-go; go run main.go; exec bash"
 
+# Start driver
+#TODO: Fiks her når vi skal kjøre vår kode ikke test driver. 
+for port in $PORTS; do
+    gnome-terminal -- bash -c "cd ../driver-go; go run main.go; exec bash" &
+done
 
-
-# gnome-terminal -- bash -c "./SimElevatorServer --port=15658; exec bash"
-
-# gnome-terminal -- bash -c "./SimElevatorServer --port=15659; exec bash"
-
-#What untill killed. 
+# Keep script alive until Ctrl+C
+# This blocks and allows trap to catch signals
 while true; do
     sleep 1
 done

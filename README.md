@@ -10,3 +10,4 @@ Husk å bruke pull hver gang dere før dere begynnr å jobbe.
 Deretter bytt branch med git checkout mybranch
 
 
+## Husk at Storforbokstav på funksjoner betyr public litenforbokstav er private :)

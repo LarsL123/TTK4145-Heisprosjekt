@@ -1,4 +1,4 @@
-package singleelevatorcontroll
+package elevatormanager
 
 import (
 	"fmt"

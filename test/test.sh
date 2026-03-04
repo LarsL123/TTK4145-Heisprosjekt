@@ -1,7 +1,7 @@
 #!/bin/sh
 # Run up to 3 elevators + driver for local testing
 
-PORTS="15657" #PORTS="15657 15658 15659"
+PORTS="15657 15658" #PORTS="15657 15658 15659"
 
 echo "Kjører test!"
 echo $PORTS

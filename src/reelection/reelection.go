@@ -11,3 +11,15 @@ package reelection
 2. Dersom master er død, gi beskjed om at vi må velge en ny master.
 3. Bestemme hvem som blir ny master?
  */
+
+ /*
+ Input:
+	channel: 
+
+ Output:
+	channel:
+ Purpose:
+	If no master exists, decide who should be master
+
+	
+ */

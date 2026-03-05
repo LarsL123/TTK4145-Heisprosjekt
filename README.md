@@ -11,3 +11,4 @@ Deretter bytt branch med git checkout mybranch
 
 
 ## Husk at Storforbokstav på funksjoner betyr public, litenforbokstav er private :)
+

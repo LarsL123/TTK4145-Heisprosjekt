@@ -47,7 +47,7 @@ func MasterActions(port int, id string, isMaster <-chan bool, peerUpdate chan Pe
 	
 }
 
-func ReceveFromSlaves(conn net.PacketConn, peerUpdateCh chan PeerUpdate){
+func RecieveFromSlaves(conn net.PacketConn, peerUpdateCh chan PeerUpdate){
 	var buf [1024]byte
 	var p PeerUpdate
 	lastSeen := make(map[string]time.Time)

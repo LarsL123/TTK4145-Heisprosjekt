@@ -16,10 +16,28 @@ const (
 	EB_Moving Behaviour = 2
 )
 
-
-
-type Elevator struct {
+type elevator struct {
 	floor int
 	Dirn elevio.MotorDirection
-	Btn elevio.ButtonType	
+	doorOpenDuration float32
+	behaviour Behaviour
+	requests [][]int
 }
+
+func elevator_uninitialized(addr string, numFloors int) elevator{
+	elevio.Init(addr, numFloors)
+	thisElevator := elevator{floor: -1, Dirn: elevio.MD_Stop, behaviour: EB_Idle, doorOpenDuration: 3.0 }
+	return thisElevator
+}
+
+// Elevator_floorsensor()
+// int elevator_floorSensor(void);
+// int elevator_requestButton(int f, Button b);
+// int elevator_stopButton(void);
+// int elevator_obstruction(void);
+
+// void elevator_floorIndicator(int f);
+// void elevator_requestButtonLight(int f, Button b, int v);
+// void elevator_doorLight(int v);
+// void elevator_stopButtonLight(int v);
+// void elevator_motorDirection(Dirn d);

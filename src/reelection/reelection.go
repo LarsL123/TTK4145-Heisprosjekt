@@ -14,12 +14,41 @@ package reelection
 
  /*
  Input:
-	channel: 
+	ListenUDP: Heartbeat{ID, ...}
 
  Output:
-	channel:
+	???
  Purpose:
-	If no master exists, decide who should be master
+	Make sure one and only one master exists at all times
+ */
 
-	
+ /*
+
+int backupCount; 
+
+function Reelect(backup) {
+	if backupCount == 0
+		setMaster(self.ID)
+	else
+		masterID <- pick random ID
+		setMaster(masterID)
+}
+
+function DeelectAll {
+	for ID in elevators:
+		setSlave(ID)
+}
+
+
+select:
+	case receivedheartbeat := <- heartbeats
+		reset -> watchdog
+
+	case expiredWatchdog := <- watchdog
+		Reelect()
+
+	if more than one master
+		DeelectAll()
+		Reelect()
+
  */

@@ -7,15 +7,20 @@ import (
 
 	"elevatorproject/src/elevio"
 )
+const N_FLOORS = 4
+//TODO: Lage en config_load funksjon
+const address = "123.123.123.123"
+const N_BUTTONS = 3
+
+
 
 func main (){
 
-	//TODO: Lage en config_load funksjon
-	address := "123.123.123.123"
-	N_FLOORS := 4
+	
+
 	//pollRate_ms := 25
 
-
+	// Spørsmål til studass: er det greit å heller definere elevator på package level, slipper dermed å passe elevator pointer til alle funksjonene som skal endre på den??
 	elev := elevator_uninitialized(address, N_FLOORS)
 	elevio.Init(address, N_FLOORS)
 	

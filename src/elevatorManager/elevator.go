@@ -1,7 +1,5 @@
 package elevatormanager
 
-
-
 import (
 	"elevatorproject/src/elevio"
 )
@@ -9,26 +7,26 @@ import (
 type Behaviour int
 
 const (
-	EB_Idle Behaviour = 0 
+	EB_Idle     Behaviour = 0
 	EB_DoorOpen Behaviour = 1
-	EB_Moving Behaviour = 2
+	EB_Moving   Behaviour = 2
 )
 
-type elevator struct {
-	floor int
-	Dirn elevio.MotorDirection
+type Elevator struct {
+	floor            int
+	Dirn             elevio.MotorDirection
 	doorOpenDuration float32
-	behaviour Behaviour
-	requests [][]int
+	behaviour        Behaviour
+	requests         [][]bool
 }
 
-func elevator_uninitialized(addr string, numFloors int) elevator{
-	
-	thisElevator := elevator{floor: -1, Dirn: elevio.MD_Stop, behaviour: EB_Idle, doorOpenDuration: 3.0 }
-	return thisElevator
+func elevator_uninitialized(addr string, numFloors int) Elevator {
+
+	elevator := Elevator{floor: -1, Dirn: elevio.MD_Stop, behaviour: EB_Idle, doorOpenDuration: 3.0}
+	return elevator
 }
 
-func buttonToString(button elevio.ButtonType) string{
+func buttonToString(button elevio.ButtonType) string {
 	switch button {
 	case elevio.BT_HallUp:
 		return "HallUp"

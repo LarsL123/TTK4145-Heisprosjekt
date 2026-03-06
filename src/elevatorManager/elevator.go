@@ -3,8 +3,6 @@ package elevatormanager
 
 
 import (
-	"fmt"
-
 	"elevatorproject/src/elevio"
 )
 
@@ -28,6 +26,18 @@ func elevator_uninitialized(addr string, numFloors int) elevator{
 	
 	thisElevator := elevator{floor: -1, Dirn: elevio.MD_Stop, behaviour: EB_Idle, doorOpenDuration: 3.0 }
 	return thisElevator
+}
+
+func buttonToString(button elevio.ButtonType) string{
+	switch button {
+	case elevio.BT_HallUp:
+		return "HallUp"
+	case elevio.BT_HallDown:
+		return "HallDown"
+	case elevio.BT_Cab:
+		return "Cab"
+	}
+	return "Invalid Button"
 }
 
 // Elevator_floorsensor()

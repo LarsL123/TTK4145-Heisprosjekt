@@ -47,6 +47,7 @@ select:
 
 */
 
+
 func setSlave(id string) {
 	// TODO: implement
 	// Depends on heartbeat struct to implement
@@ -91,6 +92,7 @@ func main() {
 
 	var maxtime = 2 * time.Second // High value just for testing. Lower for operations
 	watchdog := time.NewTimer(maxtime)
+
 
 	for {
 

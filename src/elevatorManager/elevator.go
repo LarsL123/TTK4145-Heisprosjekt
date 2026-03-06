@@ -25,7 +25,7 @@ type elevator struct {
 }
 
 func elevator_uninitialized(addr string, numFloors int) elevator{
-	elevio.Init(addr, numFloors)
+	
 	thisElevator := elevator{floor: -1, Dirn: elevio.MD_Stop, behaviour: EB_Idle, doorOpenDuration: 3.0 }
 	return thisElevator
 }

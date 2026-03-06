@@ -1,7 +1,9 @@
 package reelection
 
-import "golang.org/x/text/cases"
-
+import (
+	// "golang.org/x/text/cases"
+	"time"
+)
 // Spørsmål til studass, hvordan burde man ordne reelection?
 // Burde alle slavene kunne være backup, eller skal man ha en spesifikk backup?
 // I så fall, hvis alle er backup, så trenger man vel
@@ -45,23 +47,6 @@ select:
 
 */
 
-/*
-
-TODO: Implement system for watchdog
-
-struct watchdog{
-	time
-}
-
-func runWatchdog() {
-	for {
-	i++
-
-	if i > 1000
-	}
-}
-*/
-
 func setSlave(id string) {
 	// TODO: implement
 	// Depends on heartbeat struct to implement
@@ -85,7 +70,6 @@ func reelect() {
 		masterIsAlive = True
 	}
 	*/
-
 }
 
 func deelectAll() {
@@ -95,41 +79,41 @@ func deelectAll() {
 		setSlave(id)
 	}
 
+	masterIsAlive = False
+
 	*/
 }
 
 func main() {
 
-	// Initialize all channels, done here for testing
-	heartbeats := make(chan string) // Should be struct, of type ID
-	watchdog := make(chan int)
-	masterCount := make(chan int) // Should only be one
+	heartbeats := make(chan string) // Should be struct, of type ID, heartbeats should be initialized in network or peers
+	masterCount := make(chan int)
+
+	var maxtime = 2 * time.Second // High value just for testing. Lower for operations
+	watchdog := time.NewTimer(maxtime)
 
 	for {
+
 		select {
-		// Check if master is alive
-		case receivedheartbeat := <- heartbeats:
-			// Reset watchdog
 
+		case <- heartbeats:
+		// Reset timer when heartbeat is received
+			if !watchdog.Stop() {
+				<- watchdog.C
+			}
+			watchdog.Reset(maxtime)
 
-		// No master pings
-		case <- watchdog:
+		case <- watchdog.C:
+		// Timer has passed, value appears in channel: watchdog.C
 			reelect()
+			watchdog.Reset(maxtime)
 
-
-		// More than one master
-		case master := <- masterCount:
+		case master := <- masterCount: 
+		// If a master is detected
 			if master > 1 {
 				deelectAll()
 				reelect()
 			}
-			// 
 		}
 	}
-
-
-	// ListenUDP: Heartbeat{ID, ...}
-	
-
-
 }

@@ -9,42 +9,50 @@ import (
 )
 
 func main (){
-	//TODO: finne ut hvor adressen skal komme fra
-	//TODO: finne ut hvor N_FLOORS skal komme fra
+
+	//TODO: Lage en config_load funksjon
 	address := "123.123.123.123"
 	N_FLOORS := 4
+	//pollRate_ms := 25
 
 
-	elevator := elevator_uninitialized(address, N_FLOORS)
-
+	elev := elevator_uninitialized(address, N_FLOORS)
+	elevio.Init(address, N_FLOORS)
 	
-	driverButtonRequests := make(chan elevio.ButtonEvent)
-	driverFloorSensor := make(chan int)
-	driverObstruction := make(chan bool)
-	driverTimeout := make(chan int)
-	driverStopButton := make(chan bool)
-	
+	chDriverButtonRequests 		:= make(chan elevio.ButtonEvent)
+	chDriverFloorSensor 		:= make(chan int)
+	chDriverObstruction 		:= make(chan bool)
+	chDriverStopButton 			:= make(chan bool)
+	chDoorTimeout 				:= make(chan bool)
 
-	go elevio.PollFloorSensor(driverFloorSensor)
-	go elevio.PollButtons(driverButtonRequests)
-	go elevio.PollObstructionSwitch(driverObstruction)
-	go elevio.PollStopButton(driverStopButton)
+	go elevio.PollFloorSensor(chDriverFloorSensor)
+	go elevio.PollButtons(chDriverButtonRequests)
+	go elevio.PollObstructionSwitch(chDriverObstruction)
+	go elevio.PollStopButton(chDriverStopButton)
+	go doortimer(chDoorTimeout)
+
+	if elevio.GetFloor() == -1{
+		fsm_onInitBetweenFloors(&elev)
+	}
 
 	for {
 		select{
-		case newButtonRequest := <- driverButtonRequests:
+		case newButtonRequest := <- chDriverButtonRequests:
 			fmt.Println("Button pressed")
-			fsm_onNewButtonRequest(newButtonRequest)
+			fsm_onNewButtonRequest(&elev, newButtonRequest)
 			// TODO: fikse at requesten sendes til master
 
-		case floorArrivedAt := <- driverFloorSensor:
-			fmt.Println("Arrived at floor %d\n", floorArrivedAt)
-			fsm_onFloorArrival(floorArrivedAt)
-		case timedout := <- driverTimeout:
-			fsm_onDoorTimeout(timedout)
+		case floorArrivedAt := <- chDriverFloorSensor:
+			fmt.Printf("Arrived at floor %d\n", floorArrivedAt)
+			fsm_onFloorArrival(&elev, floorArrivedAt)
+
+		case timedout := <- chDoorTimeout:
+			fmt.Println("Door timeout")
+			fsm_onDoorTimeout(&elev,timedout)
 			//timer
-		case  <- driverObstruction :
-			fsm_onObstruction()
+
+		case  <- chDriverObstruction:
+			fsm_onObstruction(&elev)
 		}
 
 	}

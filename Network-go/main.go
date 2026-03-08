@@ -74,8 +74,8 @@ func main() {
 			fmt.Printf("  New:      %q\n", p.New)
 			fmt.Printf("  Lost:     %q\n", p.Lost)
 
-		case a := <-helloRx:
-			fmt.Printf("Received: %#v\n", a)
+		case  <-helloRx:
+			// fmt.Printf("Received: %#v\n", a)
 		}
 	}
 }

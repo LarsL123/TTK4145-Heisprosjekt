@@ -1,11 +1,5 @@
 package ordermanager
 
-/*
-
-
-
-*/
-
 import (
     "testing"
     "fmt"
@@ -13,42 +7,41 @@ import (
 
 func TestCostFunction(t *testing.T) {
 
-	ChOrders := make(chan HRAInput)
-    ChAssignments := make(chan HRAInput)
+	OrdersCh := make(chan HRAInput)
+    AssignmentsCh := make(chan map[string][][2]bool)
 
+    // Set test input
 	input := HRAInput{
         HallRequests: [][2]bool{{false, false}, {true, false}, {false, false}, {false, true}},
         States: map[string]HRAElevState{
             "one": {
                 Behavior:       "moving",
                 Floor:          3,
-                Direction:      "up",
+                Direction:      "down",
                 CabRequests:    []bool{false, false, false, true},
             },
             "two": {
                 Behavior:       "idle",
-                Floor:          1,
+                Floor:          0,
                 Direction:      "stop",
                 CabRequests:    []bool{false, false, false, false},
             },
         },
     }
 
-    go main(ChOrders, ChAssignments)
+    go ManageOrders(OrdersCh, AssignmentsCh)
 
     // Pass testing-input-data
-    ChOrders <- input
+    OrdersCh <- input
 
     for {
-        
 
+        // Receive optimal assignment
+        output := <- AssignmentsCh
 
-        output := <- ChAssignments
-        
-        
-        // Print results for testing
+        // Print results
         fmt.Printf("output: \n")
-        for k, v := range *output {
+        for k, v := range output {
             fmt.Printf("%6v :  %+v\n", k, v)
         }
     }

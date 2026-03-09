@@ -1,15 +1,20 @@
 package ordermanager
 
-// Denne modulen kjører bare på master.
-// Den skal holde styr på hvilken heis som skal ta hvilken ordre.
-// Den skal få inn nye ordre fra orderManager, regne ut hvem som skal ta hvilken ordre og sende det videre til de andre heisene
-// Master må også ha kontroll over alle slavene sine, hvordan skal dette implementeres?
-// Master må sende ut heartbeats, men må slavesa gjøre det og??
-//  - Nei, slaven svarer iAmSlave
-
 /*
 
+The order manager module recomputes the optimal assignments based on orders and states. Whenever new data enters the system, all hall requests gets reassigned. 
+This new data could be a new request, an updated state from some elevator, or an update on who is alive on the network. This redistribution means 
+that a request is not necessarily assigned to the same elevator for the duration of its lifetime, but can instead be re-assigned to a new elevator, 
+for example if a new idle elevator connects to the network, or the previously assigned elevator gets a lot of cab requests.
 
+IMPORTANT:  The module is supposed to trigger when
+                - A new order is received
+                - New info about the peers in the network is received
+                - Behaviour is updated for an elevator (Meaning e.g. idle -> moving)
+            
+                For the module to work, it needs an input as the struct HRAInput, meaning 
+                both a map of all elevator states (HRAElevState) and all hall requests, since
+                the elevator states contain cab requests.
 
 Input:
 	channel: Orders
@@ -17,18 +22,13 @@ Input:
 Output:
 	channel: Assignments
 
-Purpose:
-    Computes the optimal assignments based on orders
 */
-
-// The code below is a modified version of example.go from project_resources
 
 import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
 	"runtime"
-
 	// "golang.org/x/text/cases"
 )
 
@@ -47,7 +47,7 @@ type HRAInput struct {
     States          map[string]HRAElevState     `json:"states"`
 }
 
-func main(ChOrders chan HRAInput, ChAssignments chan HRAInput){
+func ManageOrders(OrdersCh chan HRAInput, AssignmentsCh chan map[string][][2]bool){
 
     hraExecutable := ""
     switch runtime.GOOS {
@@ -56,64 +56,36 @@ func main(ChOrders chan HRAInput, ChAssignments chan HRAInput){
         default:        panic("OS not supported")
     }
 
-    /*
-
-    input := HRAInput{
-        HallRequests: [][2]bool{{false, false}, {true, false}, {false, false}, {false, true}},
-        States: map[string]HRAElevState{
-            "one": HRAElevState{
-                Behavior:       "moving",
-                Floor:          2,
-                Direction:      "up",
-                CabRequests:    []bool{false, false, false, true},
-            },
-            "two": HRAElevState{
-                Behavior:       "idle",
-                Floor:          0,
-                Direction:      "stop",
-                CabRequests:    []bool{false, false, false, false},
-            },
-        },
-    }
-
-    */
-
     for {
-        // Order is caught, preferrably sent from the central distribution module
-        input := <- ChOrders
+
+        // Order is received on input channel
+        input := <- OrdersCh
         
+        // JSON -> String
         jsonBytes, err := json.Marshal(input)
         if err != nil {
             fmt.Println("json.Marshal error: ", err)
             return
         }
     
-        // Run cost function executable (handout)
+        // Run cost function executable
         ret, err := exec.Command("./"+hraExecutable, "-i", string(jsonBytes)).CombinedOutput()
         if err != nil {
             fmt.Println("exec.Command error: ", err)
             fmt.Println(string(ret))
             return
         }
-        
+
         output := new(map[string][][2]bool)
-        /*
+
+        // Update output map with executable data, String -> JSON
         err = json.Unmarshal(ret, &output)
         if err != nil {
             fmt.Println("json.Unmarshal error: ", err)
             return
         }
-        */
 
-        /*
-        fmt.Printf("output: \n")
-        for k, v := range *output {
-            fmt.Printf("%6v :  %+v\n", k, v)
-        }
-        */
-
-        // Pass output data to channel for module: for orderDistributor to take
-        Assignments := make(chan map[string][][2]bool) 
-        Assignments <- *output;
+        // Pass optimal assignments to output channel
+        AssignmentsCh <- *output;
     }
 }

@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+// Fra Brage til Lars: burde vi sette alle kontanter i config i stedet? Gir iaf ferre includes...
 const heartBeatInterval = 1000 * time.Millisecond //Change to 15ms
 const timeout = 2000 * time.Millisecond //Change to 500ms
 

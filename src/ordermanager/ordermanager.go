@@ -8,6 +8,9 @@ package ordermanager
 //  - Nei, slaven svarer iAmSlave
 
 /*
+
+
+
 Input:
 	channel: Orders
 
@@ -76,7 +79,7 @@ func main(ChOrders chan HRAInput, ChAssignments chan HRAInput){
     */
 
     for {
-
+        // Order is caught, preferrably sent from the central distribution module
         input := <- ChOrders
         
         jsonBytes, err := json.Marshal(input)
@@ -85,13 +88,14 @@ func main(ChOrders chan HRAInput, ChAssignments chan HRAInput){
             return
         }
     
+        // Run cost function executable (handout)
         ret, err := exec.Command("./"+hraExecutable, "-i", string(jsonBytes)).CombinedOutput()
         if err != nil {
             fmt.Println("exec.Command error: ", err)
             fmt.Println(string(ret))
             return
         }
-            
+        
         output := new(map[string][][2]bool)
         /*
         err = json.Unmarshal(ret, &output)
@@ -108,7 +112,7 @@ func main(ChOrders chan HRAInput, ChAssignments chan HRAInput){
         }
         */
 
-        // Pass output data to channel for module: orderDistributor to take
+        // Pass output data to channel for module: for orderDistributor to take
         Assignments := make(chan map[string][][2]bool) 
         Assignments <- *output;
     }

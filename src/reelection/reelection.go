@@ -2,8 +2,14 @@ package reelection
 
 import (
 	// "golang.org/x/text/cases"
+	"Network-go/network/bcast"
+	"elevatorproject/src/config"
+	"elevatorproject/src/network"
 	"time"
+
+	"golang.org/x/sys/windows/registry"
 )
+
 // Spørsmål til studass, hvordan burde man ordne reelection?
 // Burde alle slavene kunne være backup, eller skal man ha en spesifikk backup?
 // I så fall, hvis alle er backup, så trenger man vel
@@ -18,6 +24,9 @@ import (
 */
 
 /*
+
+This module is practically an event based finite state machine.
+
  Input:
 	channel: heartbeats
 
@@ -25,35 +34,20 @@ import (
 	channel: heartbeats
 
  Purpose:
-	Make sure one and only one master exists at all times
-*/
-
-/*
-
-LES:
-Det meste under er bare brainstorm for å få ned tanker
-
-
-select:
-	case receivedheartbeat := <- heartbeats
-		reset -> watchdog
-
-	case expiredWatchdog := <- watchdog
-		Reelect()
-
-	if more than one master
-		DeelectAll()
-		Reelect()
-
+	Make sure one and only one master exists at all times.
+	Internally, we need to handle the cases:
+		1 master, continue
+		< 1 master, elect exactly one master
+		> 1 master, Remove all masters, elect exactly one master
 */
 
 
-func setSlave(id string) {
+func setSlave(hb network.Heartbeat) {
 	// TODO: implement
-	// Depends on heartbeat struct to implement
+	hb.Role = 
 }
 
-func setMaster() {
+func setMaster(hb network.Heartbeat) {
 	// TODO: implement
 	// Depends on heartbeat struct to implement
 }
@@ -85,37 +79,63 @@ func deelectAll() {
 	*/
 }
 
-func main() {
+func detectMasterConflict(registry map[hb.ID]hb.Role, conflictChannel chan) {
 
-	heartbeats := make(chan string) // Should be struct, of type ID, heartbeats should be initialized in network or peers
-	masterCount := make(chan int)
+	count := 0
 
-	var maxtime = 2 * time.Second // High value just for testing. Lower for operations
-	watchdog := time.NewTimer(maxtime)
+	for _, role := range registry {
+		if role == MASTER { // Possible bug. Should it be "MASTER"?
+			count++
+		}
+	}
 
+	if count > 1 {
+		select {
+		case conflictChannel <- {}{}:
+		default: // Important to not hault the system
+		}
+	}
+
+}
+
+func RunReelectionFSM() {
+
+	conflictDetectedCh := make(chan struct{}, 1) // buffered of size 1
+	registry := map[hb.ID]hb.Role{}
+
+	// If the bcast use below is bad, for now it is written for testing
+	receive := make(chan network.Heartbeat)
+	go bcast.Receiver(config.Cfg.HeartbeatPort, receive) // Bad to receive in reelect? Better to use channels?
+
+	watchdog := time.NewTimer(timeout)
+
+	var electionRunning bool = false
 
 	for {
 
 		select {
 
-		case <- heartbeats:
+		case heartbeat <- receive:
 		// Reset timer when heartbeat is received
-			if !watchdog.Stop() {
+
+			// Will fire to conflictDetectedCh if more than one masters
+			registry[heartbeat.id] = heartbeat.Role
+			detectMasterConflict(registry, conflictDetectedCh)
+
+			if (!watchdog.Stop()) {
 				<- watchdog.C
 			}
-			watchdog.Reset(maxtime)
+			watchdog.Reset(timeout)
 
 		case <- watchdog.C:
-		// Timer has passed, value appears in channel: watchdog.C
 			reelect()
-			watchdog.Reset(maxtime)
+			watchdog.Reset(timeout)
 
-		case master := <- masterCount: 
-		// If a master is detected
-			if master > 1 {
-				deelectAll()
-				reelect()
-			}
+		// Timer has passed, value appears in channel: watchdog.
+
+		case <- conflictDetectedCh:
+			deelectAll()
+			reelect()
 		}
 	}
 }

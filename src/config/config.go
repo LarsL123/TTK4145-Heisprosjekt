@@ -6,7 +6,6 @@ import (
 	"os"
 )
 
-
 type Config struct {
     HeartbeatPort int `json:"heartbeatPort"`
 	SlaveReplyPort int `json:"slaveReplyPort"`

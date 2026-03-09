@@ -20,8 +20,8 @@ import (
 // Check for no master.
 
 func ReplyToHeartbeat(id string){ //Add port to Config file. 
-	recive := make(chan Heartbeat)
-	go bcast.Receiver(config.Cfg.HeartbeatPort, recive)
+	receive := make(chan Heartbeat)
+	go bcast.Receiver(config.Cfg.HeartbeatPort, receive)
 
 	send := make(chan Heartbeat)
 	go bcast.Transmitter(config.Cfg.SlaveReplyPort, send)
@@ -29,7 +29,7 @@ func ReplyToHeartbeat(id string){ //Add port to Config file.
 
 	fmt.Println("Reciving...")
 	for {
-		beat := <-recive
+		beat := <-receive
 		fmt.Printf("Received heartbeat from id %s that is a %s\n", beat.ID, beat.Role)
 
 		reply := Heartbeat{id, "slave"}

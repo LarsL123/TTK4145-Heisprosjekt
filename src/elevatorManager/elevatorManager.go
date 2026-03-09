@@ -56,8 +56,8 @@ func main (){
 			fsm_onDoorTimeout(&elev,timedout)
 			//timer
 
-		case  <- chDriverObstruction:
-			fsm_onObstruction(&elev)
+		case  obstruction := <- chDriverObstruction:
+			fsm_onObstruction(&elev, obstruction)
 		}
 
 	}

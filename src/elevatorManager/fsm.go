@@ -37,14 +37,24 @@ func fsm_onDoorTimeout(elev *Elevator, timeout bool) {
 
 	switch elev.behaviour {
 	case EB_DoorOpen:
+		if elev.obstructed{
+			//TODO: start timer
+			return
+		}
 		dirn, behaviour := requests_chooseDirection(*elev)
 		elev.Dirn = dirn
 		elev.behaviour = behaviour
 
 		switch elev.behaviour {
 		case EB_DoorOpen:
-			//Start timer
-
+			//TODO: Start timer
+			requests_clearAtCurrentFloor(elev)
+			//TODO: setAllLights(elev)
+		case EB_Moving:
+		case EB_Idle:
+			elevio.SetDoorOpenLamp(false)	
+			elevio.SetMotorDirection(elev.Dirn)
+			break
 		}
 	default:
 		break
@@ -87,10 +97,13 @@ func fsm_onNewButtonRequest(elev *Elevator, buttonRequest elevio.ButtonEvent) {
 		}
 		break
 	}
+	//setAllLights(elev)//?
+	fmt.Println("\nNew state:\n")
+	//print elevator()
 }
 
-func fsm_onObstruction(elev *Elevator) {
-
+func fsm_onObstruction(elev *Elevator, obstruction bool) {
+	elev.obstructed = obstruction
 }
 
 func fsm_onInitBetweenFloors(elev *Elevator) {

@@ -18,6 +18,7 @@ type Elevator struct {
 	doorOpenDuration float32
 	behaviour        Behaviour
 	requests         [][]bool
+	obstructed 		 bool 
 }
 
 func elevator_uninitialized(addr string, numFloors int) Elevator {

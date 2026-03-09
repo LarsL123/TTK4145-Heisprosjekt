@@ -63,7 +63,7 @@ func requests_chooseDirection(elev Elevator) (elevio.MotorDirection, Behaviour) 
 }
 
 // Elevator requests_clearAtCurrentFloor(Elevator e) __attribute__((pure));
-func requests_clearAtCurrentFloor(elevator Elevator) bool{
+func requests_clearAtCurrentFloor(elevator *Elevator) [][]bool{
 	// TODO: fix clearatcurrentfloor
 
 }

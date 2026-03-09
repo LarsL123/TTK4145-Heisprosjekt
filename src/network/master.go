@@ -12,8 +12,8 @@ import (
 const heartBeatInterval = 1000 * time.Millisecond //Change to 15ms
 const timeout = 2000 * time.Millisecond //Change to 500ms
 
-type PeerUpdate struct {
-	Peers []string
+type SlaveUpdate struct {
+	Slaves []string
 	New   string
 	Lost  []string
 }
@@ -23,10 +23,22 @@ type Heartbeat struct{
 	Role string //Slave/Master//TODO Make enum.
 }
 
+func StartMaster(id string, isMaster chan bool) chan SlaveUpdate{
+		go SendHeartbeats(id, isMaster)
+
+		heartBeatCh := make(chan Heartbeat)
+		go bcast.Receiver(config.Cfg.SlaveReplyPort, heartBeatCh)
+
+		slaveUpdate := make(chan SlaveUpdate)
+		go TrackSlaves(heartBeatCh, slaveUpdate)
+
+		return slaveUpdate
+}
+
 func SendHeartbeats(id string, isMaster <-chan bool) {
 	//Burde isMaster vekk?
-	send := make(chan Heartbeat)
-	go bcast.Transmitter(config.Cfg.HeartbeatPort, send)
+	sendCh := make(chan Heartbeat)
+	go bcast.Transmitter(config.Cfg.HeartbeatPort, sendCh)
 
 	heartbeat := Heartbeat{id, "master"}
 	enable := true
@@ -38,50 +50,48 @@ func SendHeartbeats(id string, isMaster <-chan bool) {
 		}
 
 		if enable {
-			send <- heartbeat
+			sendCh <- heartbeat
 		}
 	}
 }
 
-func TrackSlaves( peerUpdateCh chan<- PeerUpdate){
-	var p PeerUpdate
+func TrackSlaves(heartBeatCh <-chan Heartbeat, slaveUpdateCh chan<- SlaveUpdate){
 	lastSeen := make(map[string]time.Time)
 
-	recive := make(chan Heartbeat)
-	go bcast.Receiver(config.Cfg.SlaveReplyPort, recive)
-
 	for {
-		var id string
+		slaveID := ""
 		
 		select {
-			case acc := <- recive:
+			case acc := <- heartBeatCh:
 				if acc.ID == "" {
 					fmt.Println("Got invalid packet")
 					continue
 				}
 
-				id = acc.ID
+				slaveID = acc.ID
 
 			case <-time.After(heartBeatInterval):
 		}
 
+	
+		p := SlaveUpdate{}
 		updated := false
 
 		// Adding new connection
 		p.New = ""
-		if id != "" {
-			if _, idExists := lastSeen[id]; !idExists {
-				p.New = id
+		if slaveID != "" {
+			if _, idExists := lastSeen[slaveID]; !idExists {
+				p.New = slaveID
 				updated = true
 			}
 
-			lastSeen[id] = time.Now()
+			lastSeen[slaveID] = time.Now()
 		}
 
 		// Removing dead connection
 		p.Lost = make([]string, 0)
 		for k, v := range lastSeen {
-			if time.Now().Sub(v) > timeout {
+			if time.Since(v) > timeout {
 				updated = true
 				p.Lost = append(p.Lost, k)
 				delete(lastSeen, k)
@@ -90,15 +100,16 @@ func TrackSlaves( peerUpdateCh chan<- PeerUpdate){
 
 		// Sending update
 		if updated {
-			p.Peers = make([]string, 0, len(lastSeen))
+			p.Slaves = make([]string, 0, len(lastSeen))
 
-			for k, _ := range lastSeen {
-				p.Peers = append(p.Peers, k)
+			for k := range lastSeen {
+				p.Slaves = append(p.Slaves, k)
 			}
 
-			sort.Strings(p.Peers)
+			sort.Strings(p.Slaves)
 			sort.Strings(p.Lost)
-			peerUpdateCh <- p
+
+			slaveUpdateCh <- p
 		}
 	}
 }

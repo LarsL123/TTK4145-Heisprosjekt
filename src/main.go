@@ -21,22 +21,21 @@ func main(){
 	flag.Parse()
 
 	isMaster := make(chan bool)
-	peerUpdate := make(chan network.PeerUpdate)
+	
 
 
 	if (id == "1"){
-		go network.SendHeartbeats(id, isMaster)
-		go network.TrackSlaves(peerUpdate)
+		slaveUpdate := network.StartMaster(id, isMaster)
 
 		for {
-			p := <-peerUpdate
+			p := <-slaveUpdate
 			fmt.Printf("Slave update:\n")
-			fmt.Printf("  Slaves:    %q\n", p.Peers)
+			fmt.Printf("  Slaves:    %q\n", p.Slaves)
 			fmt.Printf("  New:      %q\n", p.New)
 			fmt.Printf("  Lost:     %q\n", p.Lost)
 		}
 	}else{
-		go network.ReplyToHeartbeat(id)
+		go network.ReplyToHeartbeat(id) //Should be Start slave
 	}
 	
 	select {}

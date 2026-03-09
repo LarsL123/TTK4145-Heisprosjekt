@@ -24,17 +24,17 @@ func main (){
 	elev := elevator_uninitialized(address, N_FLOORS)
 	elevio.Init(address, N_FLOORS)
 	
-	chDriverButtonRequests 		:= make(chan elevio.ButtonEvent)
-	chDriverFloorSensor 		:= make(chan int)
-	chDriverObstruction 		:= make(chan bool)
-	chDriverStopButton 			:= make(chan bool)
-	chDoorTimeout 				:= make(chan bool)
+	driverButtonRequestsCh 		:= make(chan elevio.ButtonEvent)
+	driverFloorSensorCh 		:= make(chan int)
+	driverObstructionCh 		:= make(chan bool)
+	driverStopButtonCh 			:= make(chan bool)
+	doorTimeoutCh 				:= make(chan bool)
 
-	go elevio.PollFloorSensor(chDriverFloorSensor)
-	go elevio.PollButtons(chDriverButtonRequests)
-	go elevio.PollObstructionSwitch(chDriverObstruction)
-	go elevio.PollStopButton(chDriverStopButton)
-	go doortimer(chDoorTimeout)
+	go elevio.PollFloorSensor(driverFloorSensorCh)
+	go elevio.PollButtons(driverButtonRequestsCh)
+	go elevio.PollObstructionSwitch(driverObstructionCh)
+	go elevio.PollStopButton(driverStopButtonCh)
+	go doortimer(doorTimeoutCh)
 
 	if elevio.GetFloor() == -1{
 		fsm_onInitBetweenFloors(&elev)
@@ -42,21 +42,21 @@ func main (){
 
 	for {
 		select{
-		case newButtonRequest := <- chDriverButtonRequests:
+		case newButtonRequest := <- driverButtonRequestsCh:
 			fmt.Println("Button pressed")
 			fsm_onNewButtonRequest(&elev, newButtonRequest)
 			// TODO: fikse at requesten sendes til master
 
-		case floorArrivedAt := <- chDriverFloorSensor:
+		case floorArrivedAt := <- driverFloorSensorCh:
 			fmt.Printf("Arrived at floor %d\n", floorArrivedAt)
 			fsm_onFloorArrival(&elev, floorArrivedAt)
 
-		case timedout := <- chDoorTimeout:
+		case timedout := <- doorTimeoutCh:
 			fmt.Println("Door timeout")
 			fsm_onDoorTimeout(&elev,timedout)
 			//timer
 
-		case  obstruction := <- chDriverObstruction:
+		case  obstruction := <- driverObstructionCh:
 			fsm_onObstruction(&elev, obstruction)
 		}
 

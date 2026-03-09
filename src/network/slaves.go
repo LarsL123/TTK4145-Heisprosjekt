@@ -2,6 +2,7 @@ package network
 
 import (
 	"Network-go/network/bcast"
+	"Network-go/network/localip"
 	"elevatorproject/src/config"
 	"fmt"
 )
@@ -19,23 +20,52 @@ import (
 // Check for double master.
 // Check for no master.
 
-func ReplyToHeartbeat(id string){ //Add port to Config file. 
+var masterip string 
+
+func ReplyToHeartbeat(id string){
 	receive := make(chan Heartbeat)
 	go bcast.Receiver(config.Cfg.HeartbeatPort, receive)
 
 	send := make(chan Heartbeat)
 	go bcast.Transmitter(config.Cfg.SlaveReplyPort, send)
-	
 
+	ip, err := localip.LocalIP()
+	if err != nil{
+		fmt.Println("Error when getting LocalIP")
+		fmt.Println("Aborting")
+		return
+	}
+	
 	fmt.Println("Reciving...")
 	for {
 		beat := <-receive
 		fmt.Printf("Received heartbeat from id %s that is a %s\n", beat.ID, beat.Role)
 
-		reply := Heartbeat{id, "slave"}
+		if beat.IP != masterip{
+			masterip = beat.IP
+			//Sendip update
+		}
+
+		reply := Heartbeat{id, "slave", ip}
 		send <-reply
 	}
 }
+
+func SendNewOrdersAndStateToMaster(sendNewOrderChannel chan bool){
+
+}
+
+func ReciveAssignemnetsFromMaster(reciveOrderChannel chan bool){
+
+}
+
+
+
+
+
+
+
+
 
 
 

@@ -2,6 +2,7 @@ package network
 
 import (
 	"Network-go/network/bcast"
+	"Network-go/network/localip"
 	"elevatorproject/src/config"
 	"fmt"
 	"sort"
@@ -21,6 +22,7 @@ type SlaveUpdate struct {
 type Heartbeat struct{
 	ID string
 	Role string //Slave/Master//TODO Make enum.
+	IP string
 }
 
 func StartMaster(id string, isMaster chan bool) chan SlaveUpdate{
@@ -40,7 +42,14 @@ func SendHeartbeats(id string, isMaster <-chan bool) {
 	sendCh := make(chan Heartbeat)
 	go bcast.Transmitter(config.Cfg.HeartbeatPort, sendCh)
 
-	heartbeat := Heartbeat{id, "master"}
+	ip, err := localip.LocalIP()
+
+	if err != nil{
+		fmt.Println("Failed to get IP. What do we do?")
+	}
+
+
+	heartbeat := Heartbeat{id, "master", ip}
 	enable := true
 
 	for {

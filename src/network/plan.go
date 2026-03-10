@@ -1,6 +1,6 @@
 package network
 
-//Divide into slave network/master network.
+// Divide into slave network/master network.
 
 /*
 In master network we do: (BIG PICTURE)
@@ -20,7 +20,7 @@ In slave Network we do:
 	4: Send orderDone
 
 In Backup Network:
-	Recive sync, acc.
+	Receive sync, ack.
 
 WE HAR ENDRA DET. mASTER POLLER OG SLAVE  BARE SVARER.
 

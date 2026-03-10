@@ -9,9 +9,13 @@ import (
 	"time"
 )
 
-// Fra Brage til Lars: burde vi sette alle kontanter i config i stedet? Gir iaf ferre includes...
-const heartBeatInterval = 1000 * time.Millisecond //Change to 15ms
-const timeout = 2000 * time.Millisecond //Change to 500ms
+type Role int
+
+const (
+	Slave Role = 0
+	Backup Role = 1
+	Master Role = 2
+)
 
 type SlaveUpdate struct {
 	Slaves []string
@@ -21,7 +25,7 @@ type SlaveUpdate struct {
 
 type Heartbeat struct{
 	ID string
-	Role string //Slave/Master//TODO Make enum.
+	Role Role //Slave/Master//TODO Make enum.  ---> Brage satt opp enum for Role. Sjekk om det gir mening.
 	IP string
 }
 

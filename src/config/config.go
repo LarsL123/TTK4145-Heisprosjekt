@@ -4,8 +4,12 @@ import (
 	"encoding/json"
 	"log"
 	"os"
-	"time"
+    "time"
 )
+
+// Previously defined in master.go, placed in config because they are tuning params
+const heartBeatInterval = 1000 * time.Millisecond //Change to 15ms
+const timeout = 2000 * time.Millisecond //Change to 500ms
 
 type Config struct {
     HeartbeatPort int `json:"heartbeatPort"`

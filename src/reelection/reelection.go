@@ -7,7 +7,7 @@ import (
 	"elevatorproject/src/network"
 	"time"
 
-	"golang.org/x/sys/windows/registry"
+	// "golang.org/x/sys/windows/registry"
 )
 
 // Spørsmål til studass, hvordan burde man ordne reelection?
@@ -120,7 +120,7 @@ func RunReelectionFSM() {
 
 			// Will fire to conflictDetectedCh if more than one masters
 			registry[heartbeat.id] = heartbeat.Role
-			detectMasterConflict(registry, conflictDetectedCh)
+			DetectMasterConflict(registry, conflictDetectedCh)
 
 			if (!watchdog.Stop()) {
 				<- watchdog.C

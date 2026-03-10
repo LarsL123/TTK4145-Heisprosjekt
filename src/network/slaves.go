@@ -2,7 +2,6 @@ package network
 
 import (
 	"Network-go/network/bcast"
-	"Network-go/network/localip"
 	"elevatorproject/src/config"
 	"fmt"
 )
@@ -20,44 +19,55 @@ import (
 // Check for double master.
 // Check for no master.
 
-var masterip string 
+// var masterip string  //Dont know hoe to do this properly.
+
+func StartSlave(id string) *ReliableSender{
+	go ReplyToHeartbeat(id)
+
+	sendOrdersCh := make(chan OrdersAndStateUpdate)
+	ackCh := make(chan OrdersAndStateAck)
+
+	go bcast.Transmitter(config.Cfg.MasterListenPort, sendOrdersCh)
+	go bcast.Receiver(config.Cfg.SlaveListenPort, ackCh)
+
+	orderSender := &ReliableSender{
+		SendCh: sendOrdersCh,
+		AckIn: ackCh,
+		AckResults: make(chan AckResult, 10), // buffered
+	}
+
+	return orderSender
+}
 
 func ReplyToHeartbeat(id string){
 	receive := make(chan Heartbeat)
 	go bcast.Receiver(config.Cfg.HeartbeatPort, receive)
 
 	send := make(chan Heartbeat)
-	go bcast.Transmitter(config.Cfg.SlaveReplyPort, send)
+	go bcast.Transmitter(config.Cfg.SlaveHeartbeatReplyPort, send)
 
-	ip, err := localip.LocalIP()
-	if err != nil{
-		fmt.Println("Error when getting LocalIP")
-		fmt.Println("Aborting")
-		return
-	}
+	// ip, err := localip.LocalIP()
+	// if err != nil{
+	// 	fmt.Println("Error when getting LocalIP")
+	// 	fmt.Println("Aborting")
+	// 	return
+	// }
 	
 	fmt.Println("Reciving...")
 	for {
-		beat := <-receive
-		fmt.Printf("Received heartbeat from id %s that is a %s\n", beat.ID, beat.Role)
+		// beat := <-receive
+		<-receive
+		// fmt.Printf("Received heartbeat from id %s that is a %s with ip %s \n", beat.ID, beat.Role, beat.IP)
 
-		if beat.IP != masterip{
-			masterip = beat.IP
-			//Sendip update
-		}
+		// if beat.IP != masterip{
+		// 	masterip = beat.IP
+		// }
 
-		reply := Heartbeat{id, "slave", ip}
+		reply := Heartbeat{id, "slave", ""}
 		send <-reply
 	}
 }
 
-func SendNewOrdersAndStateToMaster(sendNewOrderChannel chan bool){
-
-}
-
-func ReciveAssignemnetsFromMaster(reciveOrderChannel chan bool){
-
-}
 
 
 

@@ -4,18 +4,25 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"time"
 )
 
 type Config struct {
     HeartbeatPort int `json:"heartbeatPort"`
-	SlaveReplyPort int `json:"slaveReplyPort"`
+	SlaveHeartbeatReplyPort int `json:"slaveHeartbeatReplyPort"`
+	SlaveListenPort int `json:"slaveListenPort"`
+	MasterListenPort int `json:"masterListenPort"`
+	AckRetryRateMs time.Duration `json:"ackRetryRateMs"`
 }
 
 var Cfg Config
 
 var defaultValues = Config{
     HeartbeatPort: 15647,
-	SlaveReplyPort: 15648,
+	SlaveHeartbeatReplyPort: 15648,
+	SlaveListenPort: 15649,
+	MasterListenPort: 15650,
+	AckRetryRateMs: 500,
 }
 
 // Load returns the config, falling back to defaults

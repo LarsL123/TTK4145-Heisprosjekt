@@ -29,7 +29,7 @@ func StartMaster(id string, isMaster chan bool) chan SlaveUpdate{
 		go SendHeartbeats(id, isMaster)
 
 		heartBeatCh := make(chan Heartbeat)
-		go bcast.Receiver(config.Cfg.SlaveReplyPort, heartBeatCh)
+		go bcast.Receiver(config.Cfg.SlaveHeartbeatReplyPort, heartBeatCh)
 
 		slaveUpdate := make(chan SlaveUpdate)
 		go TrackSlaves(heartBeatCh, slaveUpdate)
@@ -115,6 +115,8 @@ func TrackSlaves(heartBeatCh <-chan Heartbeat, slaveUpdateCh chan<- SlaveUpdate)
 				p.Slaves = append(p.Slaves, k)
 			}
 
+			// fmt.Println(slaveIP)
+
 			sort.Strings(p.Slaves)
 			sort.Strings(p.Lost)
 
@@ -122,3 +124,5 @@ func TrackSlaves(heartBeatCh <-chan Heartbeat, slaveUpdateCh chan<- SlaveUpdate)
 		}
 	}
 }
+
+

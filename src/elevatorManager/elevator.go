@@ -14,18 +14,13 @@ const (
 
 type Elevator struct {
 	floor            int
-	Dirn             elevio.MotorDirection
+	dirn             elevio.MotorDirection
 	doorOpenDuration float32
 	behaviour        Behaviour
 	requests         [][]bool
-	obstructed 		 bool 
+	obstructed       bool
 }
 
-func elevator_uninitialized(addr string, numFloors int) Elevator {
-
-	elevator := Elevator{floor: -1, Dirn: elevio.MD_Stop, behaviour: EB_Idle, doorOpenDuration: 3.0}
-	return elevator
-}
 
 func buttonToString(button elevio.ButtonType) string {
 	switch button {

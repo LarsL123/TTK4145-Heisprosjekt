@@ -2,31 +2,19 @@ package elevatormanager
 // Idk en timer i guess
 import (
 	"time"
-	"fmt"
+	//"fmt"
 )
 
-var doorTimer *time.Timer
+// Mulig det finnes noen skjulte bugs her, må høre med studass. Men egt ganske sikker på at det burde funke.
 
-func doortimer_start(){
-	doorTimer = time.NewTimer(DOOR_OPEN_DURATION*time.Second)
+var doortimer *time.Timer
+
+func doortimer_init(){
+	doortimer = time.NewTimer(time.Millisecond)
+	doortimer.Stop()
 }
 
-
-
-func doortimer(receiver chan bool){
-	var timer1 time.Timer	
-	for {
-		select{ 
-		case runTimer := <- receiver:
-			switch runTimer{
-			case true:
-				fmt.Println("created timer")
-				timer1.Reset(DOOR_OPEN_DURATION*time.Second)
-			case false:
-				timer1.Stop()
-			}
-		case <-timer1.C:
-			receiver <- true	
-		}
-	}
+func doortimer_start(){
+	doortimer.Stop()
+	doortimer.Reset(time.Duration(elevator.doorOpenDuration)*time.Second)
 }

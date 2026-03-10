@@ -6,80 +6,78 @@ import (
 )
 
 // TODO: Denne fila skal ha kontroll på FSMen til heisen:)
+var elevator = Elevator{floor: -1,
+	behaviour:        EB_Idle,
+	doorOpenDuration: 3.0,
+	dirn:             elevio.MD_Down,
+	obstructed:       false}
 
-func fsm_setAllLights(elev *Elevator){
-	for floor := 0; floor < N_FLOORS; floor++{
-		for btn := 0; btn < N_BUTTONS; btn++{
-			elevio.SetButtonLamp(elevio.ButtonType(btn),floor,elev.requests[floor][btn])
-		} 
+func fsm_setAllLights() {
+	for floor := 0; floor < N_FLOORS; floor++ {
+		for btn := 0; btn < N_BUTTONS; btn++ {
+			elevio.SetButtonLamp(elevio.ButtonType(btn), floor, elevator.requests[floor][btn])
+		}
 	}
 }
 
-func fsm_onInitBetweenFloors(elev *Elevator) {
+func fsm_onInitBetweenFloors() {
 	elevio.SetMotorDirection(elevio.MD_Down)
-	elev.Dirn = elevio.MD_Down
-	elev.behaviour = EB_Moving
+	elevator.dirn = elevio.MD_Down
+	elevator.behaviour = EB_Moving
 }
 
-func fsm_onNewButtonRequest(elev *Elevator, buttonRequest elevio.ButtonEvent) {
+func fsm_onNewButtonRequest(buttonRequest elevio.ButtonEvent) {
 	fmt.Printf("New %s request on floor %d", buttonToString(buttonRequest.Button), buttonRequest.Floor)
 	//TODO: request sendes videre til donaldtrump, deretter til master
-	switch elev.behaviour {
+	switch elevator.behaviour {
 	case EB_DoorOpen:
-		if requestShouldClearImmediately(*elev, buttonRequest) {
-			//TODO: Start timer
+		if requestShouldClearImmediately(buttonRequest) {
+			doortimer_start()
 		} else {
-			elev.requests[buttonRequest.Floor][buttonRequest.Button] = true
+			elevator.requests[buttonRequest.Floor][buttonRequest.Button] = true
 		}
-		break
 
 	case EB_Moving:
-		elev.requests[buttonRequest.Floor][buttonRequest.Button] = true
-		break
-
+		elevator.requests[buttonRequest.Floor][buttonRequest.Button] = true
 	case EB_Idle:
-		elev.requests[buttonRequest.Floor][buttonRequest.Button] = true
-		direction, behaviour := requests_chooseDirection(*elev)
-		elev.Dirn = direction
-		elev.behaviour = behaviour
+		elevator.requests[buttonRequest.Floor][buttonRequest.Button] = true
+		direction, behaviour := requests_chooseDirection()
+		elevator.dirn = direction
+		elevator.behaviour = behaviour
 		switch behaviour {
 		case EB_DoorOpen:
 			elevio.SetDoorOpenLamp(true)
-			// TODO: Start timer
-			elev.requests = requests_clearAtCurrentFloor(elev)
-			break
+			doortimer_start()
+			requests_clearAtCurrentFloor()
+
 		case EB_Moving:
-			elevio.SetMotorDirection(elev.Dirn)
-			break
+			elevio.SetMotorDirection(elevator.dirn)
 
 		case EB_Idle:
-			break
+
 		}
-		break
 	}
 	//setAllLights(elev)//?
 	fmt.Println("\nNew state:")
 	//print elevator()
 }
 
-
-func fsm_onFloorArrival(elev *Elevator, newFloor int) {
+func fsm_onFloorArrival(newFloor int) {
 	fmt.Printf("Reached new floor: %d", newFloor)
 	// Print elevator?
-	elev.floor = newFloor
+	elevator.floor = newFloor
 
-	elevio.SetFloorIndicator(elev.floor)
+	elevio.SetFloorIndicator(elevator.floor)
 
-	switch elev.behaviour {
+	switch elevator.behaviour {
 	case EB_Moving:
 		if true { //TODO should be: requestsShouldStop(elev)
 			elevio.SetMotorDirection(elevio.MD_Stop)
 			elevio.SetDoorOpenLamp(true)
-			//Start timer
+			doortimer_start()
 			//Setall lights??
-			elev.behaviour = EB_DoorOpen
+			elevator.behaviour = EB_DoorOpen
 		}
-		break
 	default:
 		break
 	}
@@ -87,39 +85,36 @@ func fsm_onFloorArrival(elev *Elevator, newFloor int) {
 	// TODO: implement elevatorPrint(elev)
 }
 
-
-func fsm_onDoorTimeout(elev *Elevator) {
+func fsm_onDoorTimeout() {
 	fmt.Println("Door timed out")
 	// TODO: implement elevatorPrint(elev)
 
-	switch elev.behaviour {
+	switch elevator.behaviour {
 	case EB_DoorOpen:
-		if elev.obstructed{
-			//TODO: start timer
+		if elevator.obstructed {
+			doortimer_start()
 			return
 		}
-		dirn, behaviour := requests_chooseDirection(*elev)
-		elev.Dirn = dirn
-		elev.behaviour = behaviour
+		dirn, behaviour := requests_chooseDirection()
+		elevator.dirn = dirn
+		elevator.behaviour = behaviour
 
-		switch elev.behaviour {
+		switch elevator.behaviour {
 		case EB_DoorOpen:
-			//TODO: Start timer
-			
-			requests_clearAtCurrentFloor(elev)
+			doortimer_start()
+
+			requests_clearAtCurrentFloor()
 			//TODO: setAllLights(elev)
 		case EB_Moving:
 		case EB_Idle:
-			elevio.SetDoorOpenLamp(false)	
-			elevio.SetMotorDirection(elev.Dirn)
+			elevio.SetDoorOpenLamp(false)
+			elevio.SetMotorDirection(elevator.dirn)
 		}
 	default:
 		break
 	}
 }
 
-
-func fsm_onObstruction(elev *Elevator, obstruction bool) {
-	elev.obstructed = obstruction
+func fsm_onObstruction(obstruction bool) {
+	elevator.obstructed = obstruction
 }
-

@@ -63,9 +63,16 @@ func RunMasterBrain(id string){
 					orderAndStateAckCh <- network.OrdersAndStateAck{UpdateNr: data.UpdateNr}
 				}
 
-			case <-time.After(2*time.Second): //New assignment to be distrebuted. 
+			case <-time.After(6*time.Second): //New assignment to be distrebuted. 
 				fmt.Println("Sending new assignments. ")
-				//TODO for testing
+
+				msg := network.AssignmentsAndOrders{
+					SourceId: id,
+					UpdateNr: 1,
+					OrdersAndState: "Ice will come to your home",
+				}
+				
+				assignmentSender.UpdateAsync(msg)
 			}
 		}
 }

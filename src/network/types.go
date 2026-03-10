@@ -5,6 +5,10 @@ import (
 	"sync"
 )
 
+type NetMessage interface {
+    GetUpdateNr() int
+}
+
 //Maye this should just be an envolope for ack logic??
 type OrdersAndStateUpdate struct {
 	SourceId string
@@ -30,6 +34,17 @@ type AckResult struct {
     UpdateNr int
     Err      error
 }
+
+type GenericSender [A NetMessage] struct {
+    SendCh     chan<- A
+    AckIn      <-chan A
+    AckResults chan AckResult
+
+    cancelLast   context.CancelFunc // cancel previous pending send
+    mu           sync.Mutex 
+    lastUpdateNr int // Must use to prevent confict between different slaves
+}
+
 
 type AssignmentSender struct {
     SendCh     chan<- AssignmentsAndOrders

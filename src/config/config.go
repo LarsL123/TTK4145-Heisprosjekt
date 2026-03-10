@@ -16,7 +16,8 @@ type Config struct {
 	SlaveHeartbeatReplyPort int `json:"slaveHeartbeatReplyPort"`
 	SlaveListenPort int `json:"slaveListenPort"`
 	MasterListenPort int `json:"masterListenPort"`
-	AckRetryRateMs time.Duration `json:"ackRetryRateMs"`
+	AckRetryRate time.Duration `json:"ackRetryRateMs"`
+	AckTimeout time.Duration `json:"ackTimeout"`
 }
 
 var Cfg Config
@@ -26,7 +27,8 @@ var defaultValues = Config{
 	SlaveHeartbeatReplyPort: 15648,
 	SlaveListenPort: 15649,
 	MasterListenPort: 15650,
-	AckRetryRateMs: 500,
+	AckRetryRate: 500*time.Millisecond,
+	AckTimeout: 3*time.Second,
 }
 
 // Load returns the config, falling back to defaults

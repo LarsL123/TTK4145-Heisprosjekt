@@ -13,7 +13,7 @@ In master network we do: (BIG PICTURE)
 
 
 In slave Network we do:
-	1: func SendNewOrdersAndStateToMaster(sendNewOrderChannel chan bool) (ack and resend) done (missing resend)
+	1: func SendNewOrdersAndStateToMaster(sendNewOrderChannel chan bool) (ack and resend) done
 
     2: func ReciveAssignemnetsFromMaster(reciveOrderChannel chan bool)
 	3: Recive updated order list.

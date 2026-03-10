@@ -5,6 +5,7 @@ import (
 	"elevatorproject/src/config"
 	"elevatorproject/src/network"
 	"fmt"
+	"time"
 )
 
 /*
@@ -20,10 +21,29 @@ func RunMasterBrain(id string){
 		slaveUpdate := network.StartMaster(id, isMaster)
 
 		receiveOrdersAndStateUpdateCh := make(chan network.OrdersAndStateUpdate)
-		go bcast.Receiver(config.Cfg.MasterListenPort,receiveOrdersAndStateUpdateCh)
-
 		orderAndStateAckCh := make(chan network.OrdersAndStateAck)
-		go bcast.Transmitter(config.Cfg.SlaveListenPort, orderAndStateAckCh)
+		
+
+		sendAssignmentCh := make(chan network.AssignmentsAndOrders)
+		assignmentAckCh := make(chan network.AssignementsAndOrdersAck)
+
+
+		go bcast.Receiver(config.Cfg.MasterListenPort,receiveOrdersAndStateUpdateCh, assignmentAckCh)
+		go bcast.Transmitter(config.Cfg.SlaveListenPort, orderAndStateAckCh, sendAssignmentCh)
+
+
+		assignmentSender := &network.AssignmentSender{
+			SendCh: sendAssignmentCh,
+			AckIn: assignmentAckCh,
+			AckResults: make(chan network.AckResult, 10), // buffered OBS-OBS!! DO i need this??
+		}
+
+		msg := network.AssignmentsAndOrders{
+					SourceId: id,
+					UpdateNr: 1,
+					OrdersAndState: "Ice will come to your home",
+				}
+		assignmentSender.UpdateAsync(msg)
 
 		count := 1
 
@@ -34,7 +54,7 @@ func RunMasterBrain(id string){
 				fmt.Printf("  Slaves:    %q\n", p.Slaves)
 				fmt.Printf("  New:      %q\n", p.New)
 				fmt.Printf("  Lost:     %q\n", p.Lost)
-			case data := <- receiveOrdersAndStateUpdateCh:
+			case data := <- receiveOrdersAndStateUpdateCh: //Constant ack
 				fmt.Printf("Received from slave: %s \n", data.OrdersAndState)
 				fmt.Printf("count %d \n", count)
 				count++
@@ -42,6 +62,10 @@ func RunMasterBrain(id string){
 				if count > 3 {
 					orderAndStateAckCh <- network.OrdersAndStateAck{UpdateNr: data.UpdateNr}
 				}
+
+			case <-time.After(2*time.Second): //New assignment to be distrebuted. 
+				fmt.Println("Sending new assignments. ")
+				
 			}
 		}
 }

@@ -21,7 +21,7 @@ import (
 
 // var masterip string  //Dont know hoe to do this properly.
 
-func StartSlave(id string) *ReliableSender{
+func StartSlave(id string) *OrderSender{
 	go ReplyToHeartbeat(id)
 
 	sendOrdersCh := make(chan OrdersAndStateUpdate)
@@ -30,7 +30,7 @@ func StartSlave(id string) *ReliableSender{
 	go bcast.Transmitter(config.Cfg.MasterListenPort, sendOrdersCh)
 	go bcast.Receiver(config.Cfg.SlaveListenPort, ackCh)
 
-	orderSender := &ReliableSender{
+	orderSender := &OrderSender{
 		SendCh: sendOrdersCh,
 		AckIn: ackCh,
 		AckResults: make(chan AckResult, 10), // buffered

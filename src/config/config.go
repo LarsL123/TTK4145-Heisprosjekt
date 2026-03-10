@@ -4,18 +4,21 @@ import (
 	"encoding/json"
 	"log"
 	"os"
-    "time"
+	"time"
 )
 
 // Previously defined in master.go, placed in config because they are tuning params
-const heartBeatInterval = 1000 * time.Millisecond //Change to 15ms
-const timeout = 2000 * time.Millisecond //Change to 500ms
+
 
 type Config struct {
     HeartbeatPort int `json:"heartbeatPort"`
 	SlaveHeartbeatReplyPort int `json:"slaveHeartbeatReplyPort"`
+	HeartbeatInterval time.Duration `json:"heartbeatInterval"`
+	HeartbeatTimeout time.Duration `json:"heartbeatTimeout"`
+
 	SlaveListenPort int `json:"slaveListenPort"`
 	MasterListenPort int `json:"masterListenPort"`
+
 	AckRetryRate time.Duration `json:"ackRetryRateMs"`
 	AckTimeout time.Duration `json:"ackTimeout"`
 }
@@ -25,8 +28,12 @@ var Cfg Config
 var defaultValues = Config{
     HeartbeatPort: 15647,
 	SlaveHeartbeatReplyPort: 15648,
+	HeartbeatInterval: 1000 * time.Millisecond, //Change to 15ms
+	HeartbeatTimeout: 2000 * time.Millisecond, //Change to 500ms
+
 	SlaveListenPort: 15649,
 	MasterListenPort: 15650,
+	
 	AckRetryRate: 500*time.Millisecond,
 	AckTimeout: 3*time.Second,
 }

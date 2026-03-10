@@ -15,10 +15,6 @@ import (
 //Input: Only has to be started/stopped when promoted/revoked to/from master.
 //Out: Can be pulled to return the current list of slaves.
 
-//Ting som skal være i reeelection og ikke her:
-// Check for double master.
-// Check for no master.
-
 // var masterip string  //Dont know hoe to do this properly.
 
 func StartSlave(id string) *OrderSender{
@@ -63,7 +59,7 @@ func ReplyToHeartbeat(id string){
 		// 	masterip = beat.IP
 		// }
 
-		reply := Heartbeat{id, "slave", ""}
+		reply := Heartbeat{id, Slave, ""}
 		send <-reply
 	}
 }

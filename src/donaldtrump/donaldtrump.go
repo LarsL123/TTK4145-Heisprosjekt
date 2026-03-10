@@ -65,7 +65,7 @@ func RunMasterBrain(id string){
 
 			case <-time.After(2*time.Second): //New assignment to be distrebuted. 
 				fmt.Println("Sending new assignments. ")
-				
+				//TODO for testing
 			}
 		}
 }

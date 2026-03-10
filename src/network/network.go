@@ -4,47 +4,10 @@ import (
 	"context"
 	"elevatorproject/src/config"
 	"fmt"
-	"sync"
 	"time"
 )
 
-//Maye this should just be an envolope for ack logic??
-type OrdersAndStateUpdate struct {
-	SourceId string
-	UpdateNr int
-	OrdersAndState string //Custom type from daniea (mae7tro)
-}
-
-type OrdersAndStateAck struct {
-	UpdateNr int
-}
-
-type AssignmentsAndOrders struct {
-    SourceId string
-	UpdateNr int
-	OrdersAndState string //Custom type from Brage Drage
-}
-
-type AssignementsAndOrdersAck struct {
-	UpdateNr int
-}
-
-type AckResult struct {
-    UpdateNr int
-    Err      error
-}
-
-type AssignmentSender struct {
-    SendCh     chan<- AssignmentsAndOrders
-    AckIn      <-chan AssignementsAndOrdersAck
-    AckResults chan AckResult
-
-    cancelLast   context.CancelFunc // cancel previous pending send
-    mu           sync.Mutex
-    lastUpdateNr int // Must use to prevent confict between different slaves
-}
-
-//Sends OrderAndStateUpdates Async to the server. Seding a new update will cancel the previous one if its still trying to send.
+//Sends OrderAndStateUpdates Async to the server. Sending a new update will cancel the previous one if its still trying to send.
 func (r *AssignmentSender) UpdateAsync(msg AssignmentsAndOrders) {
     r.mu.Lock()
      // cancel previous send if exists
@@ -85,17 +48,6 @@ func (r *AssignmentSender) UpdateAsync(msg AssignmentsAndOrders) {
         }
     }()
 }
-
-type OrderSender struct {
-    SendCh     chan<- OrdersAndStateUpdate
-    AckIn      <-chan OrdersAndStateAck
-    AckResults chan AckResult
-
-    cancelLast   context.CancelFunc // cancel previous pending send
-    mu           sync.Mutex
-    lastUpdateNr int // Must use to prevent confict between different slaves
-}
-
 
 //Sends OrderAndStateUpdates Async to the server. Seding a new update will cancel the previous one if its still trying to send.
 func (r *OrderSender) UpdateAsync(msg OrdersAndStateUpdate) {

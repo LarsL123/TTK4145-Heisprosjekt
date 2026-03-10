@@ -26,7 +26,7 @@ type SlaveUpdate struct {
 type Heartbeat struct{
 	ID string
 	Role Role //Slave/Master//TODO Make enum.  ---> Brage satt opp enum for Role. Sjekk om det gir mening.
-	IP string
+	IP string //Not in use. Hope we dont need it. 
 }
 
 func StartMaster(id string, isMaster chan bool) chan SlaveUpdate{
@@ -53,13 +53,13 @@ func SendHeartbeats(id string, isMaster <-chan bool) {
 	}
 
 
-	heartbeat := Heartbeat{id, "master", ip}
+	heartbeat := Heartbeat{id, Master, ip}
 	enable := true
 
 	for {
 		select {
 			case enable = <-isMaster:
-			case <-time.After(heartBeatInterval):
+			case <-time.After(config.Cfg.HeartbeatInterval):
 		}
 
 		if enable {
@@ -83,7 +83,7 @@ func TrackSlaves(heartBeatCh <-chan Heartbeat, slaveUpdateCh chan<- SlaveUpdate)
 
 				slaveID = acc.ID
 
-			case <-time.After(heartBeatInterval):
+			case <-time.After(config.Cfg.HeartbeatInterval):
 		}
 
 	
@@ -104,7 +104,7 @@ func TrackSlaves(heartBeatCh <-chan Heartbeat, slaveUpdateCh chan<- SlaveUpdate)
 		// Removing dead connection
 		p.Lost = make([]string, 0)
 		for k, v := range lastSeen {
-			if time.Since(v) > timeout {
+			if time.Since(v) > config.Cfg.HeartbeatTimeout {
 				updated = true
 				p.Lost = append(p.Lost, k)
 				delete(lastSeen, k)

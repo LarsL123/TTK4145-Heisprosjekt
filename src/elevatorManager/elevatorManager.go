@@ -11,7 +11,7 @@ const N_FLOORS = 4
 //TODO: Lage en config_load funksjon
 const address = "123.123.123.123"
 const N_BUTTONS = 3
-
+const DOOR_OPEN_DURATION = 3 // [seconds]
 
 
 func main (){
@@ -51,9 +51,9 @@ func main (){
 			fmt.Printf("Arrived at floor %d\n", floorArrivedAt)
 			fsm_onFloorArrival(&elev, floorArrivedAt)
 
-		case timedout := <- doorTimeoutCh:
+		case <- doorTimer.C:
 			fmt.Println("Door timeout")
-			fsm_onDoorTimeout(&elev,timedout)
+			fsm_onDoorTimeout(&elev)
 			//timer
 
 		case  obstruction := <- driverObstructionCh:

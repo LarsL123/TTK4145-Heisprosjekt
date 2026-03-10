@@ -58,7 +58,7 @@ func fsm_onNewButtonRequest(elev *Elevator, buttonRequest elevio.ButtonEvent) {
 		break
 	}
 	//setAllLights(elev)//?
-	fmt.Println("\nNew state:\n")
+	fmt.Println("\nNew state:")
 	//print elevator()
 }
 
@@ -88,7 +88,7 @@ func fsm_onFloorArrival(elev *Elevator, newFloor int) {
 }
 
 
-func fsm_onDoorTimeout(elev *Elevator, timeout bool) {
+func fsm_onDoorTimeout(elev *Elevator) {
 	fmt.Println("Door timed out")
 	// TODO: implement elevatorPrint(elev)
 
@@ -105,13 +105,13 @@ func fsm_onDoorTimeout(elev *Elevator, timeout bool) {
 		switch elev.behaviour {
 		case EB_DoorOpen:
 			//TODO: Start timer
+			
 			requests_clearAtCurrentFloor(elev)
 			//TODO: setAllLights(elev)
 		case EB_Moving:
 		case EB_Idle:
 			elevio.SetDoorOpenLamp(false)	
 			elevio.SetMotorDirection(elev.Dirn)
-			break
 		}
 	default:
 		break

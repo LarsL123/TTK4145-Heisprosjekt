@@ -54,16 +54,20 @@ func requestsShouldStop(elevator Elevator) bool {
 
 func requestShouldClearImmediately(elev Elevator, buttonRequest elevio.ButtonEvent) bool {
 	//TODO: fix chooseDirection
-
+	return true
 }
 
 func requests_chooseDirection(elev Elevator) (elevio.MotorDirection, Behaviour) {
 	// TODO: fix chooseDirection
-
+	return elevio.MD_Down, EB_Idle
 }
 
 // Elevator requests_clearAtCurrentFloor(Elevator e) __attribute__((pure));
 func requests_clearAtCurrentFloor(elevator *Elevator) [][]bool{
 	// TODO: fix clearatcurrentfloor
-
+	a := [][]bool{
+		{false,false},
+		{false,false},
+	}
+	return a 
 }

@@ -1,141 +1,173 @@
 package reelection
 
+/*
+
+This module is present in all elevators.
+
+A central part of the module is the roles map, which maps all ids
+and roles to each other, on the format below. The idN is just for 
+explanation and is not how the ids are set up in the finished system.
+
+roles[string]network.Role {
+
+	"id1": SLAVE,
+	"id2": SLAVE,
+	"id3": MASTER,
+	"id4": SLAVE,
+	"id5": BACKUP,
+	...
+
+}
+
+*/
+
 import (
-	// "golang.org/x/text/cases"
+
 	"Network-go/network/bcast"
 	"elevatorproject/src/config"
 	"elevatorproject/src/network"
 	"time"
 
+	// "golang.org/x/text/cases"
 	// "golang.org/x/sys/windows/registry"
+
 )
 
-// Spørsmål til studass, hvordan burde man ordne reelection?
-// Burde alle slavene kunne være backup, eller skal man ha en spesifikk backup?
-// I så fall, hvis alle er backup, så trenger man vel
-// at alle acknowledger at en order er mottatt fra en annen heis, hvis ikke kan man jo miste orders
-
-// Siste problemet: Hva gjør man om en master skal integreres inn i et system der det er en master og en slave fra før?
-
-/* Denne modulen skal:
-1. Vite om master er død
-2. Dersom master er død, gi beskjed om at vi må velge en ny master.
-3. Bestemme hvem som blir ny master?
-*/
-
-/*
-
-This module is practically an event based finite state machine.
-
- Input:
-	channel: heartbeats
-
- Output:
-	channel: heartbeats
-
- Purpose:
-	Make sure one and only one master exists at all times.
-	Internally, we need to handle the cases:
-		1 master, continue
-		< 1 master, elect exactly one master
-		> 1 master, Remove all masters, elect exactly one master
-*/
+// config values defined here only for testing, will be removed
+const heartBeatInterval = 1000 * time.Millisecond //Change to 15ms
+const timeout = 2000 * time.Millisecond //Change to 500ms
 
 
-func setSlave(hb network.Heartbeat) {
-	// TODO: implement
-	hb.Role = 
-}
 
-func setMaster(hb network.Heartbeat) {
-	// TODO: implement
-	// Depends on heartbeat struct to implement
-}
+// Elects a random slave to be backup
+func ElectRandomSlave(roles map[string]network.Role) {
 
-func reelect() {
-	// Idea: Sleep for a short time. If no master is alive, elect yourself
+	var idRandom string
 
-	/*
-
-	randomNumber = randint()
-	sleep(random)
-
-	if !masterIsAlive {
-		setMaster(self.ID)
-		masterIsAlive = True
-	}
-	*/
-}
-
-func deelectAll() {
-	/*
-
-	for id in IDs {
-		setSlave(id)
+	// Looping through a map leads to a random id being chosen
+	for id, _ := range roles {
+		idRandom = id
+		if (roles[idRandom] == network.Slave) {
+			break
+		}
 	}
 
-	masterIsAlive = False
+	// Assign the random slave the role of backup
+	roles[idRandom] = network.Backup
 
-	*/
 }
 
-func detectMasterConflict(registry map[hb.ID]hb.Role, conflictChannel chan) {
+// Ensures all elevators are slaves
+func SetAllToSlave(roles map[string]network.Role) {
+
+	for k := range roles {
+		
+		roles[k] = network.Slave
+
+	}
+}
+
+// Sends a signal to the conflictDetectedCh if more than one
+// master is detected in the roleRegistry
+func DetectMasterConflict(roles map[string]network.Role, conflictDetectedCh chan struct{}) {
 
 	count := 0
 
-	for _, role := range registry {
-		if role == MASTER { // Possible bug. Should it be "MASTER"?
+	for _, role := range roles {
+		if role == network.Master {
 			count++
 		}
 	}
 
 	if count > 1 {
+
 		select {
-		case conflictChannel <- {}{}:
+
+		case conflictDetectedCh <- struct{}{}:
 		default: // Important to not hault the system
+		
 		}
 	}
 
 }
 
-func RunReelectionFSM() {
+// A goroutine only given to the backup.
+// If master dies or conflict is detected, set itself to master
+func ReelectMaster(roles map[string]network.Role, selfId string) {
+
+	// Receive heartbeats
+	heartbeatCh := make(chan network.Heartbeat)
+	bcast.Receiver(config.Cfg.HeartbeatPort, heartbeatCh)
 
 	conflictDetectedCh := make(chan struct{}, 1) // buffered of size 1
-	registry := map[hb.ID]hb.Role{}
-
-	// If the bcast use below is bad, for now it is written for testing
-	receive := make(chan network.Heartbeat)
-	go bcast.Receiver(config.Cfg.HeartbeatPort, receive) // Bad to receive in reelect? Better to use channels?
-
-	watchdog := time.NewTimer(timeout)
-
-	var electionRunning bool = false
+	noMasterCh := make(chan struct{}, 1) // buffered of size 1
 
 	for {
 
 		select {
+		
+		case <- noMasterCh:
+			if roles[selfId] == network.Backup { // If-statement could lead to bugs...
+				roles[selfId] = network.Master
+			}
+		case <- conflictDetectedCh:
+			SetAllToSlave(roles)
+			roles[selfId] = network.Master
 
-		case heartbeat <- receive:
-		// Reset timer when heartbeat is received
+		}
+	}
+}
 
-			// Will fire to conflictDetectedCh if more than one masters
-			registry[heartbeat.id] = heartbeat.Role
-			DetectMasterConflict(registry, conflictDetectedCh)
+// A goroutine only given to the master.
+// If no backup exist, elect a new backup
+func ReelectBackup(roles map[string]network.Role) {
+
+	conflictDetectedCh := make(chan struct{}, 1) // buffered of size 1
+	heartbeatCh := make(chan network.Heartbeat)
+	bcast.Receiver(config.Cfg.HeartbeatPort, heartbeatCh)
+	watchdog := time.NewTimer(timeout)
+
+	for {
+
+		select {
+		
+		case heartbeat := <- heartbeatCh:
+		// Heartbeat is received
+			roles[heartbeat.ID] = heartbeat.Role
+			DetectMasterConflict(roles, conflictDetectedCh)
 
 			if (!watchdog.Stop()) {
 				<- watchdog.C
 			}
+
 			watchdog.Reset(timeout)
 
 		case <- watchdog.C:
-			reelect()
-			watchdog.Reset(timeout)
+		// Triggered by watchdog timeout
+			ElectRandomSlave(roles)
+			
+		}
+	}
+}
 
-		// Timer has passed, value appears in channel: watchdog.
+// The main goroutine of the module, run by all elevators.
+// Starts a goroutine for reelection logic considering its role.
+func SetupReelection(roleCh chan network.Role, selfId string) {
 
-		case <- conflictDetectedCh:
-			deelectAll()
-			reelect()
+	roles := map[string]network.Role{}
+
+	
+	for role := range roleCh {
+
+		switch role {
+
+		case network.Master:
+			go ReelectBackup(roles)
+		case network.Backup:
+			go ReelectMaster(roles, selfId)
+		case network.Slave:
+			// Slave does not have reelection responsibilities:
+			// Do nothing
 		}
 	}
 }

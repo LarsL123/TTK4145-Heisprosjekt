@@ -1,75 +1,179 @@
-package reelection_test
+package reelection
 
-// For testing package reelection
+/*
+
+To run all tests at once in terminal:
+go test
+
+To run specific test in terminal:
+go test -run Test...()
+
+*/
 
 import (
-	"fmt"
-	"net"
-	"reelection"
+//	"fmt"
+//	"net"
+//	"reelection"
 	"testing"
+	"elevatorproject/src/network"
+
 )
 
-func sendheartbeat() {
+// Works as intended!
+func TestElectRandomSlave(t *testing.T) {
 
-	addr, err := net.ResolveUDPAddr("udp", "localhost:31000")
+	exampleRoles := map[string]network.Role{
 
-	if err != nil {
-		fmt.Print("Fant ingen adresse:", err)
+		"id1": network.Slave,
+		"id2": network.Slave,
+		"id3": network.Slave,
+		"id4": network.Slave,
+		"id5": network.Slave,
+		"id6": network.Slave,
+		"id7": network.Slave,
+	
 	}
 
-	conn, err := net.DialUDP("udp", nil, addr)
+	ElectRandomSlave(exampleRoles)
 
-	if err != nil {
-		log.Fatal("Rompe ass vi fikk error ", err)
-	}
-	defer conn.Close()
-	//buffer := make([]byte, 1024)
-	//response := fmt.Print("Rompami")
-	for {
-		_, err = conn.Write([]byte("rompami"))
-		// n, serverAddr, err := conn.ReadFromUDP(buffer)
-
-		if err != nil {
-			log.Printf("Fittefaenhælvete: %s", err)
-			continue
-		}
-
-		//message := string(buffer[:n])
-
-		time.Sleep(10000 * time.Millisecond)
-	}
-}
-
-
-func receiveheartbeat() {
-	addr, err := net.ResolveUDPAddr("udp", "0.0.0.0:31000")
-
-	if err != nil {
-		fmt.Print("Fant ingen adresse:", err)
-	}
-
-	conn, err := net.ListenUDP("udp", addr)
-
-	if err != nil {
-		log.Fatal("Rompe ass vi fikk error ", err)
-	}
-	defer conn.Close()
-
-	buffer := make([]byte, 1024)
-
-	for {
-		n, serverAddr, err := conn.ReadFromUDP(buffer)
-		if err != nil {
-			log.Printf("Fittefaen")
-			continue
-		}
-
-		message := string(buffer[:n])
-
-		fmt.Printf("Vi fikk melding fra %s: %s\n", serverAddr, message)
+	for id, role := range exampleRoles {
+		println(id, ": ", role, "\n")
 	}
 
 }
 
 
-///////////////////////////// 
+// Works as intended!
+func TestSetAllToSlave(t* testing.T) {
+
+	exampleRoles := map[string]network.Role{
+
+		"id1": network.Slave,
+		"id2": network.Slave,
+		"id3": network.Slave,
+		"id4": network.Backup,
+		"id5": network.Slave,
+		"id6": network.Master,
+		"id7": network.Slave,
+	
+	}
+
+	SetAllToSlave(exampleRoles)
+
+	for id, role := range exampleRoles {
+		println(id, ": ", role, "\n")
+	}	
+
+}
+
+
+func TestDetectMasterConflict(t* testing.T) {
+
+	conflictCh := make(chan struct{})
+	exampleRoles := map[string]network.Role{
+
+		"id1": network.Slave,
+		"id2": network.Slave,
+		"id3": network.Slave,
+		"id4": network.Backup,
+		"id5": network.Slave,
+		"id6": network.Master,
+		"id7": network.Slave,
+	
+	}
+
+	go DetectMasterConflict(exampleRoles, conflictCh)
+
+	// Set two ids to master
+
+	for {
+
+		<- conflictCh
+		println("Conflict detected!")
+
+	}
+
+}
+
+func TestReelectMaster(t* testing.T) {
+
+	selfId := "id4"
+	// conflictChannel
+
+	// To test case 1, update to no masters
+
+	exampleRoles := map[string]network.Role{
+
+		"id1": network.Slave,
+		"id2": network.Slave,
+		"id3": network.Slave,
+		"id4": network.Master,
+		"id5": network.Master,
+		"id6": network.Slave,
+		"id7": network.Slave,
+	
+	}
+
+	// case 2:
+	// go DetectMasterConflict(exampleRoles, )
+
+	ReelectMaster(exampleRoles, selfId)
+	
+	for id, role := range exampleRoles {
+		println(id, ": ", role, "\n")
+	}	
+
+}
+
+// Difficult to test!
+func TestReelectBackup(t* testing.T) {
+
+	/*
+
+	exampleRoles := map[string]network.Role{
+
+		"id1": network.Slave,
+		"id2": network.Slave,
+		"id3": network.Slave,
+		"id4": network.Backup,
+		"id5": network.Slave,
+		"id6": network.Master,
+		"id7": network.Slave,
+	
+	}
+
+	go ReelectBackup(exampleRoles)
+
+	bcast.Transmitter(config.Cfg.HeartbeatPort, heartbeatCh)
+
+	*/
+
+}
+
+// This function includes all other logic from the module. 
+// Could be considered a full module test.
+func TestSetupReelection(t *testing.T) {
+
+	// exampleRoleCh := make(chan )
+
+	// Difficult to setup a reasonable interface to network
+	// Should we send full registry or only changes...?
+
+	/*
+	exampleRoles := map[string]network.Role{
+		
+		"id1": network.Slave,
+		"id2": network.Slave,
+		"id3": network.Slave,
+		"id4": network.Backup,
+		"id5": network.Slave,
+		"id6": network.Master,
+		"id7": network.Slave,
+	
+	}
+
+
+
+	go SetupReelection()
+	*/
+}

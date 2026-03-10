@@ -57,37 +57,38 @@ func fsm_onNewButtonRequest(buttonRequest elevio.ButtonEvent) {
 
 		}
 	}
-	//setAllLights(elev)//?
+	fsm_setAllLights()
 	fmt.Println("\nNew state:")
-	//print elevator()
+	elevator_print()
 }
 
 func fsm_onFloorArrival(newFloor int) {
 	fmt.Printf("Reached new floor: %d", newFloor)
-	// Print elevator?
+	elevator_print()
 	elevator.floor = newFloor
 
 	elevio.SetFloorIndicator(elevator.floor)
 
 	switch elevator.behaviour {
 	case EB_Moving:
-		if true { //TODO should be: requestsShouldStop(elev)
+		if requestsShouldStop() { //TODO should be: requestsShouldStop(elev)
 			elevio.SetMotorDirection(elevio.MD_Stop)
 			elevio.SetDoorOpenLamp(true)
+			requests_clearAtCurrentFloor()
 			doortimer_start()
-			//Setall lights??
+			fsm_setAllLights()
 			elevator.behaviour = EB_DoorOpen
 		}
 	default:
 		break
 	}
 	fmt.Printf("\nNew state:\n")
-	// TODO: implement elevatorPrint(elev)
+	elevator_print()
 }
 
 func fsm_onDoorTimeout() {
 	fmt.Println("Door timed out")
-	// TODO: implement elevatorPrint(elev)
+	elevator_print()
 
 	switch elevator.behaviour {
 	case EB_DoorOpen:
@@ -104,7 +105,7 @@ func fsm_onDoorTimeout() {
 			doortimer_start()
 
 			requests_clearAtCurrentFloor()
-			//TODO: setAllLights(elev)
+			fsm_setAllLights()
 		case EB_Moving:
 		case EB_Idle:
 			elevio.SetDoorOpenLamp(false)

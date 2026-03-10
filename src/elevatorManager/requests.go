@@ -75,7 +75,7 @@ func requests_chooseDirection() (elevio.MotorDirection, Behaviour) {
 
 
 // int requests_shouldStop(Elevator e) __attribute__((pure));
-func requestsShouldStop(elevator Elevator) bool {
+func requestsShouldStop() bool {
 	switch elevator.dirn {
 	case elevio.MD_Down:
 		return (elevator.requests[elevator.floor][elevio.BT_HallDown] ||

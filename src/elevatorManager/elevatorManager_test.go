@@ -34,14 +34,14 @@ import (
 // 	fmt.Println("timer stopped from 2")
 // }
 
-func TestTimer(t *testing.T){
-	doortimer_init()
-	doortimer_start()
-	fmt.Println("timer started")
-	go resetter_timer()
-	<- doortimer.C
-	fmt.Println("timer stopped")
-}
+// func TestTimer(t *testing.T){
+// 	doortimer_init()
+// 	doortimer_start()
+// 	fmt.Println("timer started")
+// 	go resetter_timer()
+// 	<- doortimer.C
+// 	fmt.Println("timer stopped")
+// }
 
 func resetter_timer(){
 	for i := 0; i <5; i++{
@@ -49,4 +49,9 @@ func resetter_timer(){
 		doortimer_start()
 		fmt.Println("timer reset")
 	}
+}
+
+func TestSingleElevator(t *testing.T){
+	go main()
+	select{}
 }

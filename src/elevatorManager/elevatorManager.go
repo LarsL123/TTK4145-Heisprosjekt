@@ -11,7 +11,7 @@ import (
 const N_FLOORS = 4
 
 // TODO: Lage en config_load funksjon
-const address = "123.123.123.123"
+const address = "0.0.0.0:15657"
 const N_BUTTONS = 3
 const DOOR_OPEN_DURATION = 3 // [seconds]
 

@@ -2,6 +2,7 @@ package elevatormanager
 
 import (
 	"elevatorproject/src/elevio"
+	"fmt"
 )
 
 type Behaviour int
@@ -17,10 +18,9 @@ type Elevator struct {
 	dirn             elevio.MotorDirection
 	doorOpenDuration float32
 	behaviour        Behaviour
-	requests         [][]bool
+	requests         [N_FLOORS][N_BUTTONS]bool
 	obstructed       bool
 }
-
 
 func buttonToString(button elevio.ButtonType) string {
 	switch button {
@@ -34,14 +34,36 @@ func buttonToString(button elevio.ButtonType) string {
 	return "Invalid Button"
 }
 
-// Elevator_floorsensor()
-// int elevator_floorSensor(void);
-// int elevator_requestButton(int f, Button b);
-// int elevator_stopButton(void);
-// int elevator_obstruction(void);
+func dirnToString(dirn elevio.MotorDirection) string {
+	switch dirn {
+	case elevio.MD_Down:
+		return "MD_Down"
+	case elevio.MD_Up:
+		return "MD_up"
+	case elevio.MD_Stop:
+		return "MD_Stop"
+	default:
+		return "MD_Undefined"
+	}
+}
 
-// void elevator_floorIndicator(int f);
-// void elevator_requestButtonLight(int f, Button b, int v);
-// void elevator_doorLight(int v);
-// void elevator_stopButtonLight(int v);
-// void elevator_motorDirection(Dirn d);
+func behaviourToString(behaviour Behaviour) string {
+	switch behaviour {
+	case EB_Idle:
+		return "EB_Idle"
+	case EB_DoorOpen:
+		return "EB_DoorOpen"
+	case EB_Moving:
+		return "EB_Moving"
+	default:
+		return "EB_Undefined"
+	}
+}
+
+func elevator_print() {
+	fmt.Println("--------------------------------")
+	fmt.Printf("floor: %d\n"+
+		"dirn: %s\n"+
+		"behaviour: %s\n", elevator.floor, dirnToString(elevator.dirn), behaviourToString(elevator.behaviour))
+	fmt.Println("")
+}

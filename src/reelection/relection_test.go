@@ -11,12 +11,14 @@ go test -run Test...()
 */
 
 import (
-//	"fmt"
-//	"net"
-//	"reelection"
-	"testing"
+	//	"fmt"
+	//	"net"
+	//	"reelection"
+	"Network-go/network/bcast"
+	"elevatorproject/src/config"
 	"elevatorproject/src/network"
-
+	"testing"
+	"time"
 )
 
 // Works as intended!
@@ -66,35 +68,58 @@ func TestSetAllToSlave(t* testing.T) {
 
 }
 
-
+// Works as intended!
 func TestDetectMasterConflict(t* testing.T) {
 
-	conflictCh := make(chan struct{})
+	conflictCh := make(chan struct{}, 1)
 	exampleRoles := map[string]network.Role{
 
 		"id1": network.Slave,
 		"id2": network.Slave,
-		"id3": network.Slave,
-		"id4": network.Backup,
+		"id3": network.Backup,
+		"id4": network.Slave,
 		"id5": network.Slave,
 		"id6": network.Master,
 		"id7": network.Slave,
 	
 	}
 
-	go DetectMasterConflict(exampleRoles, conflictCh)
+	// View roles
+	for id, role := range exampleRoles {
+		println(id, ": ", role, "\n")
+	}
+
+	// First iterate: Only one master present
+	DetectMasterConflict(exampleRoles, conflictCh)
+
+	time.Sleep(3 * time.Second)
 
 	// Set two ids to master
+	exampleRoles["id1"] = network.Master
 
-	for {
+	// View updated roles
+	for id, role := range exampleRoles {
+		println(id, ": ", role, "\n")
+	}		
 
-		<- conflictCh
+	time.Sleep(3 * time.Second)
+	
+	// Second iterate: More than one master present
+	DetectMasterConflict(exampleRoles, conflictCh)
+
+	// If conflict is detected, alarm
+	select {
+
+	case <- conflictCh:
 		println("Conflict detected!")
-
+	
+	default:
+		println("No conflict detected!")
 	}
 
 }
 
+// Depends on an instance of ReelectBackup() to be tested
 func TestReelectMaster(t* testing.T) {
 
 	selfId := "id4"
@@ -115,7 +140,7 @@ func TestReelectMaster(t* testing.T) {
 	}
 
 	// case 2:
-	// go DetectMasterConflict(exampleRoles, )
+	// 
 
 	ReelectMaster(exampleRoles, selfId)
 	
@@ -125,10 +150,37 @@ func TestReelectMaster(t* testing.T) {
 
 }
 
+// For setting up a UDP transmitter, required for testing
+// TestReelectBackup, TestReelectMaster and TestSetupReelection
+// To use, run in separate terminal
+
+// DOES NOT WORK, try at lab
+func TestTransmitter(t *testing.T) {
+	
+	heartbeatCh := make(chan network.Heartbeat, 1)
+	go bcast.Transmitter(config.Cfg.HeartbeatPort, heartbeatCh)
+
+	println("bcast started!")
+
+	time.Sleep(5 * time.Second)
+
+	heartbeatCh <- network.Heartbeat {
+		
+		ID: "id2",
+		Role: network.Master,
+		IP: "23456", // Random for pass to work
+		
+	}
+
+	println("heartbeat sent!")
+
+	time.Sleep(30 * time.Second)
+
+}
+
+
 // Difficult to test!
 func TestReelectBackup(t* testing.T) {
-
-	/*
 
 	exampleRoles := map[string]network.Role{
 
@@ -142,11 +194,59 @@ func TestReelectBackup(t* testing.T) {
 	
 	}
 
-	go ReelectBackup(exampleRoles)
+	println("Initial roles")
+	for id, role := range exampleRoles {
+		println(id, ": ", role, "\n")
+	}	
 
-	bcast.Transmitter(config.Cfg.HeartbeatPort, heartbeatCh)
+	heartbeatCh := make(chan network.Heartbeat, 1)
 
-	*/
+	go ReelectBackup(exampleRoles, heartbeatCh)
+
+	heartbeatCh <- network.Heartbeat {
+		
+		ID: "id2",
+		Role: network.Backup,
+		IP: "23456", // Random for pass to work
+		
+	}
+
+	// println("heartbeat sent!")
+
+	// Print out status after heartbeat
+	println("Roles after heartbeats is sent before first timeout,\nshould be the same")
+	for id, role := range exampleRoles {
+		println(id, ": ", role, "\n")
+	}	
+
+	time.Sleep(time.Second)
+
+	heartbeatCh <- network.Heartbeat {
+		
+		ID: "id2",
+		Role: network.Backup,
+		IP: "23456", // Random for pass to work
+		
+	}
+
+	// println("heartbeat sent!")
+
+	// Print out status after heartbeat, should print out the same
+	println("Timeout triggers new backup")
+	for id, role := range exampleRoles {
+		println(id, ": ", role, "\n")
+	}	
+
+	time.Sleep(3 * time.Second)
+
+	// Print out status after new timeout, should print different backup
+	println("Timeout triggers new backup")
+	for id, role := range exampleRoles {
+		println(id, ": ", role, "\n")
+	}	
+	
+
+	time.Sleep(30 * time.Second)
 
 }
 

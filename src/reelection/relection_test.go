@@ -21,6 +21,33 @@ import (
 	"time"
 )
 
+// For setting up a UDP transmitter, required for testing
+// TestReelectBackup, TestReelectMaster and TestSetupReelection
+// To use, run in separate terminal
+// DOES NOT WORK on my personal laptop, try at lab
+func TestTransmitter(t *testing.T) {
+	
+	heartbeatCh := make(chan network.Heartbeat, 1)
+	go bcast.Transmitter(config.Cfg.HeartbeatPort, heartbeatCh)
+
+	println("bcast started!")
+
+	time.Sleep(5 * time.Second)
+
+	heartbeatCh <- network.Heartbeat {
+		
+		ID: "id2",
+		Role: network.Master,
+		IP: "23456", // Random for pass to work
+		
+	}
+
+	println("heartbeat sent!")
+
+	time.Sleep(30 * time.Second)
+
+}
+
 // Works as intended!
 func TestElectRandomSlave(t *testing.T) {
 
@@ -69,9 +96,10 @@ func TestSetAllToSlave(t* testing.T) {
 }
 
 // Works as intended!
-func TestDetectMasterConflict(t* testing.T) {
+func TestDetectConflict(t* testing.T) {
 
-	conflictCh := make(chan struct{}, 1)
+	masterConflictCh := make(chan struct{}, 1)
+	backupConflictCh := make(chan struct{}, 1) // Redundant
 	exampleRoles := map[string]network.Role{
 
 		"id1": network.Slave,
@@ -90,7 +118,7 @@ func TestDetectMasterConflict(t* testing.T) {
 	}
 
 	// First iterate: Only one master present
-	DetectMasterConflict(exampleRoles, conflictCh)
+	// DetectMasterConflict(exampleRoles, conflictCh)
 
 	time.Sleep(3 * time.Second)
 
@@ -105,13 +133,13 @@ func TestDetectMasterConflict(t* testing.T) {
 	time.Sleep(3 * time.Second)
 	
 	// Second iterate: More than one master present
-	DetectMasterConflict(exampleRoles, conflictCh)
+	DetectConflict(exampleRoles, masterConflictCh, backupConflictCh)
 
 	// If conflict is detected, alarm
 	select {
 
-	case <- conflictCh:
-		println("Conflict detected!")
+	case <- masterConflictCh:
+		println("Master conflict detected!")
 	
 	default:
 		println("No conflict detected!")
@@ -119,11 +147,13 @@ func TestDetectMasterConflict(t* testing.T) {
 
 }
 
-// Depends on an instance of ReelectBackup() to be tested
+// Depends on master in separate terminal to work.
 func TestReelectMaster(t* testing.T) {
 
 	selfId := "id4"
-	// conflictChannel
+
+	conflictDetectedCh := make(chan struct{}, 1) // buffered of size 1
+	noMasterCh := make(chan struct{}, 1)         // buffered of size 1
 
 	// To test case 1, update to no masters
 
@@ -139,10 +169,7 @@ func TestReelectMaster(t* testing.T) {
 	
 	}
 
-	// case 2:
-	// 
-
-	ReelectMaster(exampleRoles, selfId)
+	go ReelectMaster(exampleRoles, noMasterCh, conflictDetectedCh, selfId)
 	
 	for id, role := range exampleRoles {
 		println(id, ": ", role, "\n")
@@ -150,36 +177,7 @@ func TestReelectMaster(t* testing.T) {
 
 }
 
-// For setting up a UDP transmitter, required for testing
-// TestReelectBackup, TestReelectMaster and TestSetupReelection
-// To use, run in separate terminal
-
-// DOES NOT WORK, try at lab
-func TestTransmitter(t *testing.T) {
-	
-	heartbeatCh := make(chan network.Heartbeat, 1)
-	go bcast.Transmitter(config.Cfg.HeartbeatPort, heartbeatCh)
-
-	println("bcast started!")
-
-	time.Sleep(5 * time.Second)
-
-	heartbeatCh <- network.Heartbeat {
-		
-		ID: "id2",
-		Role: network.Master,
-		IP: "23456", // Random for pass to work
-		
-	}
-
-	println("heartbeat sent!")
-
-	time.Sleep(30 * time.Second)
-
-}
-
-
-// Difficult to test!
+// Works as intended... I believe
 func TestReelectBackup(t* testing.T) {
 
 	exampleRoles := map[string]network.Role{
@@ -244,36 +242,16 @@ func TestReelectBackup(t* testing.T) {
 	for id, role := range exampleRoles {
 		println(id, ": ", role, "\n")
 	}	
-	
 
 	time.Sleep(30 * time.Second)
 
 }
 
-// This function includes all other logic from the module. 
-// Could be considered a full module test.
 func TestSetupReelection(t *testing.T) {
 
-	// exampleRoleCh := make(chan )
-
-	// Difficult to setup a reasonable interface to network
-	// Should we send full registry or only changes...?
-
 	/*
-	exampleRoles := map[string]network.Role{
-		
-		"id1": network.Slave,
-		"id2": network.Slave,
-		"id3": network.Slave,
-		"id4": network.Backup,
-		"id5": network.Slave,
-		"id6": network.Master,
-		"id7": network.Slave,
-	
-	}
 
+	TODO: Test full system
 
-
-	go SetupReelection()
 	*/
 }

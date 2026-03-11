@@ -32,8 +32,8 @@ roles[string]network.Role {
 */
 
 import (
-	"Network-go/network/bcast"
-	"elevatorproject/src/config"
+	//"Network-go/network/bcast"
+	// "elevatorproject/src/config"
 	"elevatorproject/src/network"
 	"time"
 	// "golang.org/x/text/cases"
@@ -124,17 +124,51 @@ func DetectConflict(roles map[string]network.Role, masterConflictDetectedCh chan
 
 }
 
+// Signals if no master exists
+func DetectNoMaster(roles map[string]network.Role, noMasterCh chan struct{}, heartbeatCh chan network.Heartbeat) {
+	
+	watchdog := time.NewTimer(timeout)
+	
+	for {
+
+		select {
+
+		case heartbeat := <-heartbeatCh:
+		// Heartbeat is received
+			
+			if !watchdog.Stop() {
+				<-watchdog.C
+			}
+
+			if heartbeat.Role == network.Master {
+				watchdog.Reset(timeout)
+			}
+
+		case <-watchdog.C:
+		// Watchdog timeout -> Alarm!
+			noMasterCh <- struct{}{}
+
+		}
+	}
+
+	
+}
+
 // A goroutine only given to the backup.
 // If master dies or conflict is detected, set itself to master
-// NOT FINISHED
-func ReelectMaster(roles map[string]network.Role, selfId string) {
+func ReelectMaster(roles map[string]network.Role, noMasterCh chan struct{}, conflictDetectedCh chan struct{}, selfId string) {
 
 	// Receive heartbeats
-	heartbeatCh := make(chan network.Heartbeat)
-	bcast.Receiver(config.Cfg.HeartbeatPort, heartbeatCh)
+	//heartbeatCh := make(chan network.Heartbeat)
+	//bcast.Receiver(config.Cfg.HeartbeatPort, heartbeatCh)
 
+	// The encapsulated 
+	/*
 	conflictDetectedCh := make(chan struct{}, 1) // buffered of size 1
 	noMasterCh := make(chan struct{}, 1)         // buffered of size 1
+	*/
+
+
 
 	for {
 
@@ -200,6 +234,8 @@ func SetupReelection(roleCh chan network.Role, selfId string) {
 
 	// REMOVE
 	heartbeatCh := make(chan network.Heartbeat, 1)
+	conflictDetectedCh := make(chan struct{}, 1) // buffered of size 1
+	noMasterCh := make(chan struct{}, 1)         // buffered of size 1
 	// REMOVE
 
 	for role := range roleCh {
@@ -209,7 +245,8 @@ func SetupReelection(roleCh chan network.Role, selfId string) {
 		case network.Master:
 			go ReelectBackup(roles, heartbeatCh) // REMOVE heartbeatCh after
 		case network.Backup:
-			go ReelectMaster(roles, selfId)
+			go DetectNoMaster(roles, noMasterCh, heartbeatCh)
+			go ReelectMaster(roles, noMasterCh, conflictDetectedCh, selfId)
 		case network.Slave:
 			// Slave does not have reelection responsibilities:
 			// Do nothing

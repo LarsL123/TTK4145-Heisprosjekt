@@ -7,9 +7,6 @@ import (
 	"time"
 )
 
-// Previously defined in master.go, placed in config because they are tuning params
-
-
 type Config struct {
     HeartbeatPort int `json:"heartbeatPort"`
 	SlaveHeartbeatReplyPort int `json:"slaveHeartbeatReplyPort"`

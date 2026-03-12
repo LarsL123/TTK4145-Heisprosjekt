@@ -1,7 +1,7 @@
 package elevatormanager
 
 import (
-	//"elevatorproject/src/elevio"
+	"elevatorproject/src/elevio"
 	"fmt"
 	"testing"
 	"time"
@@ -52,6 +52,18 @@ func resetter_timer(){
 }
 
 func TestSingleElevator(t *testing.T){
-	go main()
-	select{}
+	receiveOrdersCh := make(chan elevio.ButtonEvent)
+	sendAssignmentsCh := make(chan elevio.ButtonEvent)
+	sendStateCh := make(chan Elevator)
+	orderCompleteCh := make(chan elevio.ButtonEvent)
+	turnOnLightCh := make(chan elevio.ButtonEvent)
+	
+	go main(receiveOrdersCh, sendAssignmentsCh)
+	for{
+		order := <- receiveOrdersCh
+
+
+
+		sendAssignmentsCh <- order
+	}
 }

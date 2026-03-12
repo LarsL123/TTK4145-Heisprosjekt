@@ -19,7 +19,7 @@ type Elevator struct {
 	doorOpenDuration 	float32
 	behaviour        	Behaviour
 	requests         	[N_FLOORS][N_BUTTONS]bool
-	//assignments			[N_FLOORS][N_BUTTONS]bool
+	lights_on			[N_FLOORS][N_BUTTONS]bool
 	obstructed       	bool
 }
 

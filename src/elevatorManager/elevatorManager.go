@@ -15,7 +15,7 @@ const address = "0.0.0.0:15657"
 const N_BUTTONS = 3
 const DOOR_OPEN_DURATION = 3 // [seconds]
 
-func main(sendOrderCh chan<- Elevator, receiveAssignmentsCh <-chan elevio.ButtonEvent, lightUpdateCh <- chan ) {
+func main(sendOrderCh chan elevio.ButtonEvent, receiveAssignmentsCh chan elevio.ButtonEvent) {
 
 	//pollRate_ms := 25
 
@@ -33,6 +33,7 @@ func main(sendOrderCh chan<- Elevator, receiveAssignmentsCh <-chan elevio.Button
 	go elevio.PollButtons(driverButtonRequestsCh)
 	go elevio.PollObstructionSwitch(driverObstructionCh)
 	go elevio.PollStopButton(driverStopButtonCh)
+
 	doortimer_init()
 
 	if elevio.GetFloor() == -1 {
@@ -61,6 +62,5 @@ func main(sendOrderCh chan<- Elevator, receiveAssignmentsCh <-chan elevio.Button
 		case obstruction := <-driverObstructionCh:
 			fsm_onObstruction(obstruction)
 		}
-
 	}
 }

@@ -16,18 +16,21 @@ cleanup() {
 
 trap cleanup EXIT INT TERM
 
-# Start elevators in separate terminals
-for port in $PORTS; do
-    gnome-terminal -- bash -c "echo 'Heis-$port'; ./SimElevatorServer --port=$port; exec bash" &
-done
+# # Start elevators in separate terminals
+# for port in $PORTS; do
+#     gnome-terminal -- bash -c "echo 'Heis-$port'; ./SimElevatorServer --port=$port; exec bash" &
+# done
 
-sleep 0.2
+# sleep 0.2
 
-# Start driver
-#TODO: Fiks her når vi skal kjøre vår kode ikke test driver. 
-for port in $PORTS; do
-    gnome-terminal -- bash -c "cd ../driver-go; go run main.go; exec bash" &
-done
+# # Start driver
+# #TODO: Fiks her når vi skal kjøre vår kode ikke test driver. 
+# for port in $PORTS; do
+#     gnome-terminal -- bash -c "cd ../driver-go; go run main.go; exec bash" &
+# done
+
+gnome-terminal -- bash -c "go run ./src/main.go -id=1; exec bash" &
+gnome-terminal -- bash -c "go run ./src/main.go -id=2; exec bash" &
 
 # Keep script alive until Ctrl+C
 # This blocks and allows trap to catch signals

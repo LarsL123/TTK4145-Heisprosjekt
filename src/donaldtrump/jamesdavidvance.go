@@ -15,7 +15,7 @@ func RunSlaveBrain(id string){
 						UpdateNr: count,
 						OrdersAndState: "Moren din er mann",
 					}
-			orderSender.UpdateAsync(msg)
+			orderSender.UpdateAsyncGeneric(msg)
 
 			for {
 				select {
@@ -28,9 +28,10 @@ func RunSlaveBrain(id string){
 							OrdersAndState: "Moren din er mann",
 						}
 
-						orderSender.UpdateAsync(msg)
+						orderSender.UpdateAsyncGeneric(msg)
 						
 				case res := <-orderSender.AckResults:
+
 					//Check res.UpdateNr to check that the ACk is from the latest ctate change and is not old.
 					if res.Err != nil {
 						fmt.Println("Failed:", res.Err)

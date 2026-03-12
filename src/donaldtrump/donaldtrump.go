@@ -32,7 +32,7 @@ func RunMasterBrain(id string){
 		go bcast.Transmitter(config.Cfg.SlaveListenPort, orderAndStateAckCh, sendAssignmentCh)
 
 
-		assignmentSender := &network.AssignmentSender{
+		assignmentSender := &network.GenericSender[network.AssignmentsAndOrders, network.AssignementsAndOrdersAck]{
 			SendCh: sendAssignmentCh,
 			AckIn: assignmentAckCh,
 			AckResults: make(chan network.AckResult, 10), // buffered OBS-OBS!! DO i need this??
@@ -43,7 +43,7 @@ func RunMasterBrain(id string){
 					UpdateNr: 1,
 					OrdersAndState: "Ice will come to your home",
 				}
-		assignmentSender.UpdateAsync(msg)
+		assignmentSender.UpdateAsyncGeneric(msg)
 
 		count := 1
 
@@ -72,7 +72,7 @@ func RunMasterBrain(id string){
 					OrdersAndState: "Ice will come to your home",
 				}
 				
-				assignmentSender.UpdateAsync(msg)
+				assignmentSender.UpdateAsyncGeneric(msg)
 			}
 		}
 }

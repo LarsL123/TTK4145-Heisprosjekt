@@ -47,6 +47,7 @@ type HRAInput struct {
     States          map[string]HRAElevState     `json:"states"`
 }
 
+// Calculates optimal assignments based on orders
 func ManageOrders(OrdersCh chan HRAInput, AssignmentsCh chan map[string][][2]bool){
 
     hraExecutable := ""

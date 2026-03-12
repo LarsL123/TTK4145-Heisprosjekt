@@ -32,7 +32,7 @@ roles[string]network.Role {
 */
 
 import (
-	//"Network-go/network/bcast"
+	"Network-go/network/bcast"
 	"elevatorproject/src/config"
 	"elevatorproject/src/network"
 	"time"
@@ -154,6 +154,8 @@ func DetectNoMaster(roles map[string]network.Role, noMasterCh chan struct{}, hea
 	
 }
 
+
+
 // A goroutine only given to the backup.
 // If master dies or conflict is detected, set itself to master
 func ReelectMaster(roles map[string]network.Role, noMasterCh chan struct{}, conflictDetectedCh chan struct{}, selfId string) {
@@ -228,12 +230,16 @@ func ReelectBackup(roles map[string]network.Role, heartbeatCh chan network.Heart
 
 // The main goroutine of the module, run by all elevators.
 // Starts a goroutine for reelection logic considering its role.
+/*
 func SetupReelection(roleCh chan network.Role, selfId string) {
 
 	roles := map[string]network.Role{}
-
-	// REMOVE
 	heartbeatCh := make(chan network.Heartbeat, 1)
+	go bcast.Receiver(config.Cfg.HeartbeatPort, heartbeatCh)
+
+	// TODO: Split heartbeats into two channels
+
+	// REMOV
 	conflictDetectedCh := make(chan struct{}, 1) // buffered of size 1
 	noMasterCh := make(chan struct{}, 1)         // buffered of size 1
 	// REMOVE
@@ -252,4 +258,162 @@ func SetupReelection(roleCh chan network.Role, selfId string) {
 			// Do nothing
 		}
 	}
+}
+*/
+
+/////////////////////////////////// NEW CODE ////////////////////////////////////////////
+// WILL REMOVE ALL ABOVE WHEN NEW CODE IS SETUP
+
+// Split heartbeat into separte channels, only containing their IDs
+func SplitHeartbeats(heartbeatCh chan network.Heartbeat, masterHeartbeatCh chan string, backupHeartbeatCh chan string) {
+
+	go bcast.Receiver(config.Cfg.HeartbeatPort, heartbeatCh)
+
+	for {
+
+		heartbeat := <- heartbeatCh
+		
+		if (heartbeat.Role == network.Master) {
+
+			masterHeartbeatCh <- heartbeat.ID
+
+		}
+
+		if (heartbeat.Role == network.Backup) {
+
+			backupHeartbeatCh <- heartbeat.ID
+
+		}
+	}
+
+
+}
+
+func SetupReelection(roleCh chan network.Role, selfId string) {
+
+	heartbeatCh := make(chan network.Heartbeat, 1)
+	masterHearbeatCh := make(chan string) // Buffered?
+	backupHeartbeatCh := make(chan string) // Buffered?
+
+	// Receive and split heartbeats
+	go SplitHeartbeats(heartbeatCh, masterHearbeatCh, backupHeartbeatCh)
+
+	for role := range roleCh {
+
+		switch role {
+
+		case network.Master:
+			go DetectMasterConflict(selfId, masterHearbeatCh, roleCh)
+
+		case network.Backup:
+			go DetectBackupConflict(selfId, backupHeartbeatCh, roleCh)
+			go BackupSelfElectMaster(selfId)
+		
+		case network.Slave:
+			go SlaveSelfElectBackup(selfId, masterHearbeatCh)
+		}
+	}
+}
+
+
+func DetectMasterConflict(selfID string, masterHeartbeatCh chan string, roleCh chan network.Role) {
+
+prevMasterID := ""
+
+for {
+
+	masterHeartbeat := <- masterHeartbeatCh
+		
+	if (masterHeartbeat != prevMasterID) {
+	// Conflict detected
+		
+		// Suicide
+		roleCh <- network.Slave
+		return
+	
+	}
+		
+	if (masterHeartbeat == prevMasterID || masterHeartbeat == "") {
+	// Stash for comparison
+	
+		prevMasterID = masterHeartbeat
+		
+		}
+	}
+}
+
+
+
+func DetectBackupConflict(selfID string, backupHeartbeatCh chan string, roleCh chan network.Role) {
+
+	prevBackupID := ""
+
+	for {
+		backupHeartbeat := <- backupHeartbeatCh
+	
+		prevBackupID = backupHeartbeat
+		
+		if (backupHeartbeat != prevBackupID) {
+		// Conflict detected
+		
+			// Suicide
+			roleCh <- network.Slave
+			// TODO: Kill BackupSelfElectMaster()
+			return
+		}
+		
+		if (backupHeartbeat == prevBackupID || backupHeartbeat == "") { // nil for second expression
+		// Stash for comparison
+	
+			prevBackupID = backupHeartbeat
+		
+		}
+	}
+}
+
+
+
+func BackupSelfElectMaster(selfID string, masterHeartbeatCh chan string, roleCh chan network.Role) {
+
+// bcast.Transmit(backupHeartbeatCh) TODO SETUP TRANSMIT
+watchdog := time.NewTimer(timeout)
+
+for {
+
+	select {
+	
+		case <- masterHeartbeatCh:
+		watchdog.Reset(timeout)
+		
+		case <- watchdog.C:
+		
+		// Suicide
+		roleCh <- network.Master
+		return 
+	
+	}
+
+}	
+
+}
+
+func SlaveSelfElectBackup(selfID string, masterHeartBeatCh chan string) {
+
+watchdog := time.NewTimer(timeout)
+
+for {
+
+	select {
+	
+		case <- masterHeartBeatCh:
+		watchdog.Reset(timeout)
+		
+		case <- watchdog.C:
+		// TODO: ELECT SELFID to MASTER
+		watchdog.Reset(timeout)
+	
+	}
+
+}
+
 }

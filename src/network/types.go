@@ -9,6 +9,10 @@ type NetMessage interface {
     GetUpdateNr() int
 }
 
+type NetAck interface {
+    GetUpdateNr() int
+}
+
 //Maye this should just be an envolope for ack logic??
 type OrdersAndStateUpdate struct {
 	SourceId string
@@ -16,9 +20,20 @@ type OrdersAndStateUpdate struct {
 	OrdersAndState string //Custom type from daniea (mae7tro)
 }
 
+func (s *OrdersAndStateUpdate) GetUpdateNr() int {
+    return s.UpdateNr  
+}
+
 type OrdersAndStateAck struct {
 	UpdateNr int
+    Err error
 }
+
+func (s *OrdersAndStateAck) GetUpdateNr() int{
+    return s.UpdateNr
+}
+
+
 
 type AssignmentsAndOrders struct {
     SourceId string
@@ -35,9 +50,9 @@ type AckResult struct {
     Err      error
 }
 
-type GenericSender [A NetMessage] struct {
+type GenericSender [A NetMessage, B NetAck] struct {
     SendCh     chan<- A
-    AckIn      <-chan A
+    AckIn      <-chan B
     AckResults chan AckResult
 
     cancelLast   context.CancelFunc // cancel previous pending send

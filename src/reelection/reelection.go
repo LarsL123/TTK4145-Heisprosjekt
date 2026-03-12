@@ -33,7 +33,7 @@ roles[string]network.Role {
 
 import (
 	//"Network-go/network/bcast"
-	// "elevatorproject/src/config"
+	"elevatorproject/src/config"
 	"elevatorproject/src/network"
 	"time"
 	// "golang.org/x/text/cases"
@@ -41,8 +41,8 @@ import (
 )
 
 // config values defined here only for testing, will be removed
-const heartBeatInterval = 1000 * time.Millisecond //Change to 15ms
-const timeout = 2000 * time.Millisecond           //Change to 500ms
+var heartBeatInterval = config.Cfg.HeartbeatInterval //Change to 15ms
+var timeout = config.Cfg.HeartbeatTimeout          //Change to 500ms
 
 // Ensures roles-map does not store multiple elevators as backup
 func ClearAllBackups(roles map[string]network.Role) {
@@ -56,7 +56,7 @@ func ClearAllBackups(roles map[string]network.Role) {
 }
 
 // Elects a random slave to be backup
-func ElectRandomSlave(roles map[string]network.Role) {
+func ElectSlaveToBackup(roles map[string]network.Role) {
 
 	var idRandom string
 
@@ -220,7 +220,7 @@ func ReelectBackup(roles map[string]network.Role, heartbeatCh chan network.Heart
 			// FOR TEST
 
 			ClearAllBackups(roles)
-			ElectRandomSlave(roles)
+			ElectSlaveToBackup(roles)
 			watchdog.Reset(timeout)
 		}
 	}

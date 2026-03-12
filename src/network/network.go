@@ -7,8 +7,7 @@ import (
 	"time"
 )
 
-//Sends OrderAndStateUpdates Async to the server. Sending a new update will cancel the previous one if its still trying to send.
-func (r *GenericSender[T]) UpdateAsyncGeneric(msg T) {
+func (r *GenericSender[A, B]) UpdateAsyncGeneric(msg A) {
     r.mu.Lock()
      // cancel previous send if exists
     if r.cancelLast != nil {
@@ -37,12 +36,12 @@ func (r *GenericSender[T]) UpdateAsyncGeneric(msg T) {
                 r.SendCh <- msg
             case ack := <-r.AckIn:
                 if ack.GetUpdateNr() == msg.GetUpdateNr() {
-                    r.AckResults <- AckResult{UpdateNr: ack.GetUpdateNr(), Err: nil}
+                    r.AckResults <- AckResult{ack.GetUpdateNr(), nil}
                     return
                 } 
                 // ignore ACKs for older messages ord other units
             case <-timeoutTimer.C:
-                r.AckResults <- AckResult{UpdateNr: msg.GetUpdateNr(), Err: fmt.Errorf("timeout waiting for ack assignmentSender")}
+                r.AckResults <- AckResult{msg.GetUpdateNr(), fmt.Errorf("timeout waiting for ack assignmentSender") }
                 return
             }
         }

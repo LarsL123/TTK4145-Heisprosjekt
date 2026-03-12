@@ -63,7 +63,7 @@ func TestElectRandomSlave(t *testing.T) {
 	
 	}
 
-	ElectRandomSlave(exampleRoles)
+	ElectSlaveToBackup(exampleRoles)
 
 	for id, role := range exampleRoles {
 		println(id, ": ", role, "\n")

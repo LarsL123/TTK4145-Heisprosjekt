@@ -15,7 +15,7 @@ const address = "0.0.0.0:15657"
 const N_BUTTONS = 3
 const DOOR_OPEN_DURATION = 3 // [seconds]
 
-func main() {
+func main(sendOrderCh chan<- elevio.ButtonEvent, receiveAssignmentsCh <-chan elevio.ButtonEvent) {
 
 	//pollRate_ms := 25
 
@@ -41,9 +41,13 @@ func main() {
 
 	for {
 		select {
+		case newAssignment := <- receiveAssignmentsCh:
+			fmt.Println("Received Assignment")
+			fsm_onNewAssignment(newAssignment)
+
 		case newButtonRequest := <-driverButtonRequestsCh:
 			fmt.Println("Button pressed")
-			fsm_onNewButtonRequest(newButtonRequest)
+			fsm_onNewButtonRequest(newButtonRequest,sendOrderCh)
 			// TODO: fikse at requesten sendes til master
 
 		case floorArrivedAt := <-driverFloorSensorCh:

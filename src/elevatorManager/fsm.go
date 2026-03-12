@@ -26,9 +26,10 @@ func fsm_onInitBetweenFloors() {
 	elevator.behaviour = EB_Moving
 }
 
-func fsm_onNewButtonRequest(buttonRequest elevio.ButtonEvent) {
+func fsm_onNewAssignment(buttonRequest elevio.ButtonEvent) {
 	fmt.Printf("New %s request on floor %d", buttonToString(buttonRequest.Button), buttonRequest.Floor)
 	//TODO: request sendes videre til donaldtrump, deretter til master
+
 	switch elevator.behaviour {
 	case EB_DoorOpen:
 		if requestShouldClearImmediately(buttonRequest) {
@@ -52,9 +53,7 @@ func fsm_onNewButtonRequest(buttonRequest elevio.ButtonEvent) {
 
 		case EB_Moving:
 			elevio.SetMotorDirection(elevator.dirn)
-
 		case EB_Idle:
-
 		}
 	}
 	fsm_setAllLights()
@@ -120,4 +119,8 @@ func fsm_onDoorTimeout() {
 
 func fsm_onObstruction(obstruction bool) {
 	elevator.obstructed = obstruction
+}
+
+func fsm_onNewButtonRequest(buttonRequest elevio.ButtonEvent, sendOrderCh chan<- elevio.ButtonEvent) {
+	sendOrderCh <- buttonRequest
 }

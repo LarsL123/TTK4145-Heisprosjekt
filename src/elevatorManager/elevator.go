@@ -14,12 +14,13 @@ const (
 )
 
 type Elevator struct {
-	floor            int
-	dirn             elevio.MotorDirection
-	doorOpenDuration float32
-	behaviour        Behaviour
-	requests         [N_FLOORS][N_BUTTONS]bool
-	obstructed       bool
+	floor            	int
+	dirn             	elevio.MotorDirection
+	doorOpenDuration 	float32
+	behaviour        	Behaviour
+	requests         	[N_FLOORS][N_BUTTONS]bool
+	assignments			[N_FLOORS][N_BUTTONS]bool
+	obstructed       	bool
 }
 
 func buttonToString(button elevio.ButtonType) string {

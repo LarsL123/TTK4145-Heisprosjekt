@@ -71,7 +71,7 @@ func fsm_onFloorArrival(newFloor int) {
 
 	switch elevator.behaviour {
 	case EB_Moving:
-		if requestsShouldStop() { //TODO should be: requestsShouldStop(elev)
+		if requestsShouldStop() {
 			elevio.SetMotorDirection(elevio.MD_Stop)
 			elevio.SetDoorOpenLamp(true)
 			requests_clearAtCurrentFloor()
@@ -96,6 +96,7 @@ func fsm_onDoorTimeout() {
 			doortimer_start()
 			return
 		}
+
 		dirn, behaviour := requests_chooseDirection()
 		elevator.dirn = dirn
 		elevator.behaviour = behaviour
@@ -103,10 +104,11 @@ func fsm_onDoorTimeout() {
 		switch elevator.behaviour {
 		case EB_DoorOpen:
 			doortimer_start()
-
 			requests_clearAtCurrentFloor()
 			fsm_setAllLights()
 		case EB_Moving:
+			elevio.SetMotorDirection(elevator.dirn)
+			elevio.SetDoorOpenLamp(false)
 		case EB_Idle:
 			elevio.SetDoorOpenLamp(false)
 			elevio.SetMotorDirection(elevator.dirn)

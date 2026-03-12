@@ -35,8 +35,12 @@ func request_here() bool{
 	return false
 }
 
+// func requests_chooseDirection() (elevio.MotorDirection){
+
+// }
+
+
 func requests_chooseDirection() (elevio.MotorDirection, Behaviour) {
-	// TODO: fix chooseDirection
 	switch elevator.dirn{
 	case elevio.MD_Up:
 		if request_above(){

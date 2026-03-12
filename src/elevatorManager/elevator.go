@@ -65,5 +65,6 @@ func elevator_print() {
 	fmt.Printf("floor: %d\n"+
 		"dirn: %s\n"+
 		"behaviour: %s\n", elevator.floor, dirnToString(elevator.dirn), behaviourToString(elevator.behaviour))
-	fmt.Println("")
+	fmt.Println("Requests:")
+	fmt.Print(elevator.requests)
 }

@@ -15,7 +15,7 @@ const address = "0.0.0.0:15657"
 const N_BUTTONS = 3
 const DOOR_OPEN_DURATION = 3 // [seconds]
 
-func main(sendOrderCh chan<- elevio.ButtonEvent, receiveAssignmentsCh <-chan elevio.ButtonEvent) {
+func main(sendOrderCh chan<- Elevator, receiveAssignmentsCh <-chan elevio.ButtonEvent, lightUpdateCh <- chan ) {
 
 	//pollRate_ms := 25
 

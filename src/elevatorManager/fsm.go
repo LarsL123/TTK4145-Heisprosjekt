@@ -26,22 +26,18 @@ func fsm_onInitBetweenFloors() {
 	elevator.behaviour = EB_Moving
 }
 
-func fsm_onNewAssignment(buttonRequest elevio.ButtonEvent) {
-	fmt.Printf("New %s request on floor %d", buttonToString(buttonRequest.Button), buttonRequest.Floor)
+// Skal motta requests i form av en array [N_FLOORS][N_BUTTONS]bool
+func fsm_onNewAssignment(requests [N_FLOORS][N_BUTTONS]bool, sendClearedRequests chan elevio.ButtonEvent) {
+	fmt.Printf("Requests updated")
 	//TODO: request sendes videre til donaldtrump, deretter til master
 
 	switch elevator.behaviour {
 	case EB_DoorOpen:
-		if requestShouldClearImmediately(buttonRequest) {
-			doortimer_start()
-		} else {
-			elevator.requests[buttonRequest.Floor][buttonRequest.Button] = true
-		}
-
+		elevator.requests = requests
 	case EB_Moving:
-		elevator.requests[buttonRequest.Floor][buttonRequest.Button] = true
+		elevator.requests = requests
 	case EB_Idle:
-		elevator.requests[buttonRequest.Floor][buttonRequest.Button] = true
+		elevator.requests = requests
 		direction, behaviour := requests_chooseDirection()
 		elevator.dirn = direction
 		elevator.behaviour = behaviour
@@ -49,7 +45,7 @@ func fsm_onNewAssignment(buttonRequest elevio.ButtonEvent) {
 		case EB_DoorOpen:
 			elevio.SetDoorOpenLamp(true)
 			doortimer_start()
-			requests_clearAtCurrentFloor()
+			requests_clearAtCurrentFloor(sendClearedRequests) // Denne sender per nå også til orderHandler, burde kanskje implementeres i annen kode, men nå er det sånn.
 
 		case EB_Moving:
 			elevio.SetMotorDirection(elevator.dirn)
@@ -61,10 +57,11 @@ func fsm_onNewAssignment(buttonRequest elevio.ButtonEvent) {
 	elevator_print()
 }
 
-func fsm_onFloorArrival(newFloor int) {
+func fsm_onFloorArrival(newFloor int, sendClearedRequests chan elevio.ButtonEvent) {
 	fmt.Printf("Reached new floor: %d", newFloor)
-	elevator_print()
 	elevator.floor = newFloor
+	elevator_print()
+
 
 	elevio.SetFloorIndicator(elevator.floor)
 
@@ -73,7 +70,7 @@ func fsm_onFloorArrival(newFloor int) {
 		if requestsShouldStop() {
 			elevio.SetMotorDirection(elevio.MD_Stop)
 			elevio.SetDoorOpenLamp(true)
-			requests_clearAtCurrentFloor()
+			requests_clearAtCurrentFloor(sendClearedRequests) // Denne sender per nå også til orderHandler, burde kanskje implementeres i annen kode, men nå er det sånn.
 			doortimer_start()
 			fsm_setAllLights()
 			elevator.behaviour = EB_DoorOpen
@@ -85,7 +82,7 @@ func fsm_onFloorArrival(newFloor int) {
 	elevator_print()
 }
 
-func fsm_onDoorTimeout() {
+func fsm_onDoorTimeout(sendClearedRequests chan elevio.ButtonEvent) {
 	fmt.Println("Door timed out")
 	elevator_print()
 
@@ -103,7 +100,7 @@ func fsm_onDoorTimeout() {
 		switch elevator.behaviour {
 		case EB_DoorOpen:
 			doortimer_start()
-			requests_clearAtCurrentFloor()
+			requests_clearAtCurrentFloor(sendClearedRequests) // Denne sender per nå også til orderHandler, burde kanskje implementeres i annen kode, men nå er det sånn.
 			fsm_setAllLights()
 		case EB_Moving:
 			elevio.SetMotorDirection(elevator.dirn)
@@ -122,5 +119,10 @@ func fsm_onObstruction(obstruction bool) {
 }
 
 func fsm_onNewButtonRequest(buttonRequest elevio.ButtonEvent, sendOrderCh chan<- elevio.ButtonEvent) {
-	sendOrderCh <- buttonRequest
+	fmt.Printf("New %s order on floor %d", buttonToString(buttonRequest.Button), buttonRequest.Floor)
+	if elevator.behaviour == EB_DoorOpen && requestShouldClearImmediately(buttonRequest) {
+		doortimer_start()
+	} else {
+		sendOrderCh <- buttonRequest
+	}
 }

@@ -43,27 +43,30 @@ import (
 // 	fmt.Println("timer stopped")
 // }
 
-func resetter_timer(){
-	for i := 0; i <5; i++{
+func resetter_timer() {
+	for i := 0; i < 5; i++ {
 		time.Sleep(time.Second)
 		doortimer_start()
 		fmt.Println("timer reset")
 	}
 }
 
-func TestSingleElevator(t *testing.T){
+func TestSingleElevator(t *testing.T) {
 	receiveOrdersCh := make(chan elevio.ButtonEvent)
-	sendAssignmentsCh := make(chan elevio.ButtonEvent)
-	sendStateCh := make(chan Elevator)
-	orderCompleteCh := make(chan elevio.ButtonEvent)
-	turnOnLightCh := make(chan elevio.ButtonEvent)
-	
-	go main(receiveOrdersCh, sendAssignmentsCh)
-	for{
-		order := <- receiveOrdersCh
+	receiveFinishedOrderCh := make(chan elevio.ButtonEvent, 10)
+	sendAssignmentsCh := make(chan [N_FLOORS][N_BUTTONS]bool)
 
+	go elevatorManager(receiveOrdersCh, receiveFinishedOrderCh, sendAssignmentsCh)
 
+	var requests [N_FLOORS][N_BUTTONS]bool
 
-		sendAssignmentsCh <- order
+	for {
+		select {
+		case order := <-receiveOrdersCh:
+			requests[order.Floor][order.Button] = true
+		case clearedOrder := <-receiveFinishedOrderCh:
+			requests[clearedOrder.Floor][clearedOrder.Button] = false
+		}
+		sendAssignmentsCh <- requests
 	}
 }

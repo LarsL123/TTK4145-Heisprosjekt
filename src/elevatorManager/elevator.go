@@ -14,13 +14,19 @@ const (
 )
 
 type Elevator struct {
-	floor            	int
-	dirn             	elevio.MotorDirection
-	doorOpenDuration 	float32
-	behaviour        	Behaviour
-	requests         	[N_FLOORS][N_BUTTONS]bool
-	lights_on			[N_FLOORS][N_BUTTONS]bool
-	obstructed       	bool
+	floor            int
+	dirn             elevio.MotorDirection
+	doorOpenDuration float32
+	behaviour        Behaviour
+	requests         [N_FLOORS][N_BUTTONS]bool
+	lights_on        [N_FLOORS][N_BUTTONS]bool
+	obstructed       bool
+}
+
+func elevator_init() {
+	doortimer_init()
+	elevio.SetDoorOpenLamp(false)
+	fsm_setAllLights()
 }
 
 func buttonToString(button elevio.ButtonType) string {
@@ -68,4 +74,5 @@ func elevator_print() {
 		"behaviour: %s\n", elevator.floor, dirnToString(elevator.dirn), behaviourToString(elevator.behaviour))
 	fmt.Println("Requests:")
 	fmt.Print(elevator.requests)
+	fmt.Println("\n-------------------------------")
 }

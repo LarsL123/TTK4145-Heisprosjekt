@@ -101,6 +101,7 @@ func requestShouldClearImmediately(buttonRequest elevio.ButtonEvent) bool {
 }
 
 // Denne sender per nå også til orderHandler, burde kanskje implementeres i annen kode, men nå er det sånn.
+// Det er en bug her, noen ganger så clearer ikke denne alltid. Dermed ender testfunksjonen noen ganger med å ikke cleare requests med en gang.  tipper det er pga at det er en buffered channel og at vi sender hver gang.  Skal prøve å fikse på bussen imorra. Må også cleane opp spaghettikoden.
 func requests_clearAtCurrentFloor(sendClearedRequests chan elevio.ButtonEvent) {
 	// TODO: fix clearatcurrentfloor
 	var clearedRequest elevio.ButtonEvent
@@ -132,7 +133,7 @@ func requests_clearAtCurrentFloor(sendClearedRequests chan elevio.ButtonEvent) {
 		elevator.requests[elevator.floor][elevio.BT_HallUp] = false
 		elevator.requests[elevator.floor][elevio.BT_HallDown] = false
 
-		
+
 		clearedRequest.Button = elevio.BT_HallUp
 		sendClearedRequests <- clearedRequest
 

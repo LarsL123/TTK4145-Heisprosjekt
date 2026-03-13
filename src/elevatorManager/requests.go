@@ -104,43 +104,50 @@ func requestShouldClearImmediately(buttonRequest elevio.ButtonEvent) bool {
 // Det er en bug her, noen ganger så clearer ikke denne alltid. Dermed ender testfunksjonen noen ganger med å ikke cleare requests med en gang.  tipper det er pga at det er en buffered channel og at vi sender hver gang.  Skal prøve å fikse på bussen imorra. Må også cleane opp spaghettikoden.
 func requests_clearAtCurrentFloor(sendClearedRequests chan []elevio.ButtonEvent) {
 	// TODO: fix clearatcurrentfloor
-	clearedRequestArray := make([]elevio.ButtonEvent,0)
-	var clearedRequest elevio.ButtonEvent
+	clearedRequestArray := make([]elevio.ButtonEvent, 0)
+	//var clearedRequest elevio.ButtonEvent
 	elevator.requests[elevator.floor][elevio.BT_Cab] = false
 
-	clearedRequest.Button = elevio.BT_Cab
-	clearedRequest.Floor = elevator.floor
-	clearedRequestArray = append(clearedRequestArray, clearedRequest)
+	clearedRequestArray = append(clearedRequestArray, elevio.ButtonEvent{
+		Floor:  elevator.floor,
+		Button: elevio.BT_Cab})
 
 	switch elevator.dirn {
 	case elevio.MD_Up:
 		if !request_above() && !elevator.requests[elevator.floor][elevio.BT_HallUp] {
 			elevator.requests[elevator.floor][elevio.BT_HallDown] = false
-			clearedRequest.Button = elevio.BT_HallDown
-			clearedRequestArray = append(clearedRequestArray, clearedRequest)
+			clearedRequestArray = append(clearedRequestArray, elevio.ButtonEvent{
+				Floor:  elevator.floor,
+				Button: elevio.BT_HallDown})
 		}
+
 		elevator.requests[elevator.floor][elevio.BT_HallUp] = false
-		clearedRequest.Button = elevio.BT_HallUp
-		clearedRequestArray = append(clearedRequestArray, clearedRequest)
+		clearedRequestArray = append(clearedRequestArray, elevio.ButtonEvent{
+			Floor:  elevator.floor,
+			Button: elevio.BT_HallUp})
 	case elevio.MD_Down:
 		if !request_below() && !elevator.requests[elevator.floor][elevio.BT_HallDown] {
 			elevator.requests[elevator.floor][elevio.BT_HallUp] = false
-			clearedRequest.Button = elevio.BT_HallUp
-			clearedRequestArray = append(clearedRequestArray, clearedRequest)
+			clearedRequestArray = append(clearedRequestArray, elevio.ButtonEvent{
+				Floor:  elevator.floor,
+				Button: elevio.BT_HallUp})
 		}
 		elevator.requests[elevator.floor][elevio.BT_HallDown] = false
 
-		clearedRequest.Button = elevio.BT_HallDown
-		clearedRequestArray = append(clearedRequestArray, clearedRequest)
+		clearedRequestArray = append(clearedRequestArray, elevio.ButtonEvent{
+			Floor:  elevator.floor,
+			Button: elevio.BT_HallDown})
+
 	default:
 		elevator.requests[elevator.floor][elevio.BT_HallUp] = false
 		elevator.requests[elevator.floor][elevio.BT_HallDown] = false
 
-
-		clearedRequest.Button = elevio.BT_HallUp
-		clearedRequestArray = append(clearedRequestArray, clearedRequest)
-		clearedRequest.Button = elevio.BT_HallDown
-		clearedRequestArray = append(clearedRequestArray, clearedRequest)
+		clearedRequestArray = append(clearedRequestArray, elevio.ButtonEvent{
+			Floor:  elevator.floor,
+			Button: elevio.BT_HallUp})
+		clearedRequestArray = append(clearedRequestArray, elevio.ButtonEvent{
+			Floor:  elevator.floor,
+			Button: elevio.BT_HallDown})
 	}
 	sendClearedRequests <- clearedRequestArray
 }

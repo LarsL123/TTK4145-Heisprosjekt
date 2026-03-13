@@ -63,7 +63,6 @@ func TestSingleElevator(t *testing.T) {
 	for {
 		select {
 		case order := <-receiveOrdersCh:
- 
 			requests[order.Floor][order.Button] = true
 			sendAssignmentsCh <- requests
 		case clearedOrders := <-receiveFinishedOrderCh:

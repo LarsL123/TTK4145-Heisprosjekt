@@ -38,7 +38,8 @@ func elevatorManager(elevStateCh chan<-Elevator ,sendOrderCh chan elevio.ButtonE
 		fsm_onInitBetweenFloors()
 	}
 
-	sendStateTicker := time.NewTimer(config.Cfg.ElevatorUpdateRate)
+	sendStateTicker := time.NewTicker(config.Cfg.ElevatorUpdateRate)
+	defer sendStateTicker.Stop()
 
 	for {
 		select {

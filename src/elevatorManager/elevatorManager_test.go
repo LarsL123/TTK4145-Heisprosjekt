@@ -55,8 +55,9 @@ func TestSingleElevator(t *testing.T) {
 	receiveOrdersCh := make(chan elevio.ButtonEvent)
 	receiveFinishedOrderCh := make(chan []elevio.ButtonEvent)
 	sendAssignmentsCh := make(chan [N_FLOORS][N_BUTTONS]bool)
+	receiveElevatorState := make(chan Elevator)
 
-	go elevatorManager(receiveOrdersCh, receiveFinishedOrderCh, sendAssignmentsCh)
+	go elevatorManager(receiveElevatorState,receiveOrdersCh, receiveFinishedOrderCh, sendAssignmentsCh)
 
 	var requests [N_FLOORS][N_BUTTONS]bool
 
@@ -69,6 +70,8 @@ func TestSingleElevator(t *testing.T) {
 			for _, request := range clearedOrders{
 				requests[request.Floor][request.Button] = false
 			}
+		case data :=  <- receiveElevatorState:
+			fmt.Println("The elevator is currently: ", data.behaviour)
 		}
 	}
 }

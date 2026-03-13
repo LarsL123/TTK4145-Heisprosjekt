@@ -4,7 +4,9 @@ package elevatormanager
 
 import (
 	"fmt"
+	"time"
 
+	"elevatorproject/src/config"
 	"elevatorproject/src/elevio"
 )
 
@@ -15,7 +17,7 @@ const address = "0.0.0.0:15657"
 const N_BUTTONS = 3
 const DOOR_OPEN_DURATION = 3 // [seconds]
 
-func elevatorManager(sendOrderCh chan elevio.ButtonEvent, sendFinishedOrderch chan []elevio.ButtonEvent, receiveAssignmentsCh chan [N_FLOORS][N_BUTTONS]bool) {
+func elevatorManager(elevStateCh chan<-Elevator ,sendOrderCh chan elevio.ButtonEvent, sendFinishedOrderch chan []elevio.ButtonEvent, receiveAssignmentsCh chan [N_FLOORS][N_BUTTONS]bool) {
 	// Spørsmål til studass: er det greit å heller definere elevator på package level, slipper dermed å passe elevator pointer til alle funksjonene som skal endre på den??
 
 	elevio.Init(address, N_FLOORS)
@@ -35,6 +37,8 @@ func elevatorManager(sendOrderCh chan elevio.ButtonEvent, sendFinishedOrderch ch
 	if elevio.GetFloor() == -1 {
 		fsm_onInitBetweenFloors()
 	}
+
+	sendStateTicker := time.NewTimer(config.Cfg.ElevatorUpdateRate)
 
 	for {
 		select {
@@ -57,6 +61,10 @@ func elevatorManager(sendOrderCh chan elevio.ButtonEvent, sendFinishedOrderch ch
 
 		case obstruction := <-driverObstructionCh:
 			fsm_onObstruction(obstruction)
+
+		case <- sendStateTicker.C:
+			fsm_sendElevatorState(elevStateCh)
 		}
+	
 	}
 }

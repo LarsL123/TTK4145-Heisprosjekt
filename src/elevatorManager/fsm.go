@@ -12,6 +12,10 @@ var elevator = Elevator{floor: -1,
 	dirn:             elevio.MD_Down,
 	obstructed:       false}
 
+func fsm_sendElevatorState(sendCh chan<- Elevator){
+	sendCh <- elevator
+}
+
 func fsm_setAllLights() {
 	for floor := 0; floor < N_FLOORS; floor++ {
 		for btn := 0; btn < N_BUTTONS; btn++ {

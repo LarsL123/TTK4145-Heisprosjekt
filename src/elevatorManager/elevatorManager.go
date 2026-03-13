@@ -11,14 +11,11 @@ import (
 const N_FLOORS = 4
 
 // TODO: Lage en config_load funksjon
-const address = "0.0.0.0:1568"
+const address = "0.0.0.0:15657"
 const N_BUTTONS = 3
 const DOOR_OPEN_DURATION = 3 // [seconds]
 
-func elevatorManager(sendOrderCh chan elevio.ButtonEvent, sendFinishedOrderch chan elevio.ButtonEvent, receiveAssignmentsCh chan [N_FLOORS][N_BUTTONS]bool) {
-
-	//pollRate_ms := 25
-
+func elevatorManager(sendOrderCh chan elevio.ButtonEvent, sendFinishedOrderch chan []elevio.ButtonEvent, receiveAssignmentsCh chan [N_FLOORS][N_BUTTONS]bool) {
 	// Spørsmål til studass: er det greit å heller definere elevator på package level, slipper dermed å passe elevator pointer til alle funksjonene som skal endre på den??
 
 	elevio.Init(address, N_FLOORS)

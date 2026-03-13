@@ -27,7 +27,7 @@ func fsm_onInitBetweenFloors() {
 }
 
 // Skal motta requests i form av en array [N_FLOORS][N_BUTTONS]bool
-func fsm_onNewAssignment(requests [N_FLOORS][N_BUTTONS]bool, sendClearedRequests chan elevio.ButtonEvent) {
+func fsm_onNewAssignment(requests [N_FLOORS][N_BUTTONS]bool, sendClearedRequests chan []elevio.ButtonEvent) {
 	fmt.Printf("Requests updated")
 	//TODO: request sendes videre til donaldtrump, deretter til master
 
@@ -57,7 +57,7 @@ func fsm_onNewAssignment(requests [N_FLOORS][N_BUTTONS]bool, sendClearedRequests
 	elevator_print()
 }
 
-func fsm_onFloorArrival(newFloor int, sendClearedRequests chan elevio.ButtonEvent) {
+func fsm_onFloorArrival(newFloor int, sendClearedRequests chan []elevio.ButtonEvent) {
 	fmt.Printf("Reached new floor: %d", newFloor)
 	elevator.floor = newFloor
 	elevator_print()
@@ -82,7 +82,7 @@ func fsm_onFloorArrival(newFloor int, sendClearedRequests chan elevio.ButtonEven
 	elevator_print()
 }
 
-func fsm_onDoorTimeout(sendClearedRequests chan elevio.ButtonEvent) {
+func fsm_onDoorTimeout(sendClearedRequests chan []elevio.ButtonEvent) {
 	fmt.Println("Door timed out")
 	elevator_print()
 

@@ -53,7 +53,7 @@ func resetter_timer() {
 
 func TestSingleElevator(t *testing.T) {
 	receiveOrdersCh := make(chan elevio.ButtonEvent)
-	receiveFinishedOrderCh := make(chan elevio.ButtonEvent, 10)
+	receiveFinishedOrderCh := make(chan []elevio.ButtonEvent)
 	sendAssignmentsCh := make(chan [N_FLOORS][N_BUTTONS]bool)
 
 	go elevatorManager(receiveOrdersCh, receiveFinishedOrderCh, sendAssignmentsCh)
@@ -63,11 +63,13 @@ func TestSingleElevator(t *testing.T) {
 	for {
 		select {
 		case order := <-receiveOrdersCh:
+ 
 			requests[order.Floor][order.Button] = true
 			sendAssignmentsCh <- requests
-		case clearedOrder := <-receiveFinishedOrderCh:
-			requests[clearedOrder.Floor][clearedOrder.Button] = false
+		case clearedOrders := <-receiveFinishedOrderCh:
+			for _, request := range clearedOrders{
+				requests[request.Floor][request.Button] = false
+			}
 		}
-
 	}
 }

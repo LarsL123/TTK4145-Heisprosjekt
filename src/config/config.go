@@ -9,7 +9,7 @@ import (
 
 type Config struct {
     HeartbeatPort int `json:"heartbeatPort"`
-	SlaveHeartbeatReplyPort int `json:"slaveHeartbeatReplyPort"`
+	HeartbeatReplyPort int `json:"slaveHeartbeatReplyPort"`
 	HeartbeatInterval time.Duration `json:"heartbeatInterval"`
 	HeartbeatTimeout time.Duration `json:"heartbeatTimeout"`
 
@@ -29,7 +29,7 @@ var Cfg Config
 
 var defaultValues = Config{
     HeartbeatPort: 15647,
-	SlaveHeartbeatReplyPort: 15648,
+	HeartbeatReplyPort: 15648,
 	HeartbeatInterval: 1000 * time.Millisecond, //Change to 15ms
 	HeartbeatTimeout: 2000 * time.Millisecond, //Change to 500ms
 

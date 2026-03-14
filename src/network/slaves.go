@@ -40,7 +40,7 @@ func ReplyToHeartbeat(id string){
 	go bcast.Receiver(config.Cfg.HeartbeatPort, receive)
 
 	send := make(chan Heartbeat)
-	go bcast.Transmitter(config.Cfg.SlaveHeartbeatReplyPort, send)
+	go bcast.Transmitter(config.Cfg.HeartbeatReplyPort, send)
 
 	// ip, err := localip.LocalIP()
 	// if err != nil{

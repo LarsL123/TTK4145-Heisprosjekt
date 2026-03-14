@@ -3,6 +3,7 @@ package network
 import (
 	"Network-go/network/bcast"
 	"Network-go/network/localip"
+	"context"
 	"elevatorproject/src/config"
 	"fmt"
 	"sort"
@@ -29,19 +30,23 @@ type Heartbeat struct{
 	IP string //Not in use. Hope we dont need it. 
 }
 
-func StartMaster(id string, isMaster chan bool) chan SlaveUpdate{
-		go SendHeartbeats(id, isMaster)
+func StartMaster(id string, ctx context.Context) chan SlaveUpdate{
+
+
+
+		go SendHeartbeats(id, ctx)
 
 		heartBeatCh := make(chan Heartbeat)
-		go bcast.Receiver(config.Cfg.SlaveHeartbeatReplyPort, heartBeatCh)
+		go bcast.Receiver(config.Cfg.HeartbeatReplyPort, heartBeatCh)
 
 		slaveUpdate := make(chan SlaveUpdate)
-		go TrackSlaves(heartBeatCh, slaveUpdate)
+		go TrackSlaves(heartBeatCh, slaveUpdate, ctx)
 
 		return slaveUpdate
 }
 
-func SendHeartbeats(id string, isMaster <-chan bool) {
+
+func SendHeartbeats(id string, ctx context.Context) {
 	//Burde isMaster vekk?
 	sendCh := make(chan Heartbeat)
 	go bcast.Transmitter(config.Cfg.HeartbeatPort, sendCh)
@@ -54,27 +59,27 @@ func SendHeartbeats(id string, isMaster <-chan bool) {
 
 
 	heartbeat := Heartbeat{id, Master, ip}
-	enable := true
 
 	for {
 		select {
-			case enable = <-isMaster:
+			case <- ctx.Done():
+					return
 			case <-time.After(config.Cfg.HeartbeatInterval):
-		}
-
-		if enable {
-			sendCh <- heartbeat
+				sendCh <- heartbeat
 		}
 	}
 }
 
-func TrackSlaves(heartBeatCh <-chan Heartbeat, slaveUpdateCh chan<- SlaveUpdate){
+func TrackSlaves(heartBeatCh <-chan Heartbeat, slaveUpdateCh chan<- SlaveUpdate, ctx context.Context ){
 	lastSeen := make(map[string]time.Time)
 
 	for {
 		slaveID := ""
 		
 		select {
+			case <- ctx.Done():
+				return
+
 			case acc := <- heartBeatCh:
 				if acc.ID == "" {
 					fmt.Println("Got invalid packet")

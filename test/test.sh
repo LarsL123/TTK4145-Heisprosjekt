@@ -29,8 +29,10 @@ trap cleanup EXIT INT TERM
 #     gnome-terminal -- bash -c "cd ../driver-go; go run main.go; exec bash" &
 # done
 
-gnome-terminal -- bash -c "go run ./src/main.go -id=1; exec bash" &
-gnome-terminal -- bash -c "go run ./src/main.go -id=2; exec bash" &
+gnome-terminal -- bash -c "cd ../src/reelection; go test -run Test4; exec bash" &
+gnome-terminal -- bash -c "cd ../src/reelection; go test -run Test2; exec bash" &
+gnome-terminal -- bash -c "cd ../src/reelection; go test -run Test3; exec bash" &
+
 
 # Keep script alive until Ctrl+C
 # This blocks and allows trap to catch signals

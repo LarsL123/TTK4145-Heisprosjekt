@@ -13,7 +13,7 @@ import (
 type Role int
 
 const (
-	Slave Role = 0
+	Slave  Role = 0
 	Backup Role = 1
 	Master Role = 2
 )
@@ -31,10 +31,7 @@ type Heartbeat struct{
 }
 
 func StartMaster(id string, ctx context.Context) chan SlaveUpdate{
-
-
-
-		go SendHeartbeats(id, ctx)
+		go SendHeartbeats(id,Master, ctx)
 
 		heartBeatCh := make(chan Heartbeat)
 		go bcast.Receiver(config.Cfg.HeartbeatReplyPort, heartBeatCh)
@@ -45,8 +42,12 @@ func StartMaster(id string, ctx context.Context) chan SlaveUpdate{
 		return slaveUpdate
 }
 
+func StartBackup(id string, ctx context.Context){
+		go SendHeartbeats(id,Backup, ctx)
+}
 
-func SendHeartbeats(id string, ctx context.Context) {
+
+func SendHeartbeats(id string, role Role, ctx context.Context) {
 	//Burde isMaster vekk?
 	sendCh := make(chan Heartbeat)
 	go bcast.Transmitter(config.Cfg.HeartbeatPort, sendCh)
@@ -58,12 +59,12 @@ func SendHeartbeats(id string, ctx context.Context) {
 	}
 
 
-	heartbeat := Heartbeat{id, Master, ip}
+	heartbeat := Heartbeat{id, role, ip}
 
 	for {
 		select {
 			case <- ctx.Done():
-					return
+				return
 			case <-time.After(config.Cfg.HeartbeatInterval):
 				sendCh <- heartbeat
 		}

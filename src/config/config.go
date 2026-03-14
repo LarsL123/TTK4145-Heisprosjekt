@@ -18,6 +18,11 @@ type Config struct {
 
 	AckRetryRate time.Duration `json:"ackRetryRateMs"`
 	AckTimeout time.Duration `json:"ackTimeout"`
+
+	ElevatorUpdateRate time.Duration `json:"elevatorUpdateRate"`
+
+	// N_FLOORS int `json:"nFloors"` 
+	// N_BUTTONS int `json:"nButtons"` //TODO: Er dette forksjellige i elevatorManager og orderManager? Isåfall hva gjør man?
 }
 
 var Cfg Config
@@ -33,6 +38,8 @@ var defaultValues = Config{
 	
 	AckRetryRate: 500*time.Millisecond,
 	AckTimeout: 3*time.Second,
+
+	ElevatorUpdateRate: 2*time.Second,
 }
 
 // Load returns the config, falling back to defaults

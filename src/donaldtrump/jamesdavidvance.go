@@ -1,43 +1,63 @@
 package donaldtrump
 
 import (
-	"elevatorproject/src/network"
-	"fmt"
-	"time"
+	"Network-go/network/bcast"
+	"elevatorproject/src/config"
+	elevatormanager "elevatorproject/src/elevatorManager"
+	"elevatorproject/src/elevio"
+	"elevatorproject/src/types"
 )
 
 func RunSlaveBrain(id string){
-			orderSender := network.StartSlave(id)
-			count := 1
+	// Recive from elevatorManager, send to master. 
 
-			msg := network.OrdersAndStateUpdate{
-						SourceId: id,
-						UpdateNr: count,
-						OrdersAndState: "Moren din er mann",
-					}
-			orderSender.UpdateAsyncGeneric(msg)
+	receiveOrdersCh := make(chan elevio.ButtonEvent)
+	receiveFinishedOrderCh := make(chan []elevio.ButtonEvent)
 
-			for {
-				select {
-				case <-time.After(1000 *time.Millisecond): //Simulates updating orders. 
-				
-						count++
-						msg := network.OrdersAndStateUpdate{
-							SourceId: id,
-							UpdateNr: count,
-							OrdersAndState: "Moren din er mann",
-						}
+	sendAssignmentsCh := make(chan [N_FLOORS][N_BUTTONS]bool)
+	receiveElevatorState := make(chan types.ElevatorState)
 
-						orderSender.UpdateAsyncGeneric(msg)
-						
-				case res := <-orderSender.AckResults:
+	go elevatormanager.ElevatorManager(receiveElevatorState,receiveOrdersCh, receiveFinishedOrderCh, sendAssignmentsCh)
 
-					//Check res.UpdateNr to check that the ACk is from the latest ctate change and is not old.
-					if res.Err != nil {
-						fmt.Println("Failed:", res.Err)
-					} else {
-						fmt.Println("ACK received for", res.UpdateNr)
-					}
-				}
-			}
+	sendElevatorState := make(chan types.ElevatorState)
+	go bcast.Transmitter(config.Cfg.MasterListenPort, sendElevatorState)
+
+	for {
+		select{
+		case state:=  <- receiveElevatorState:
+			state.ID = id
+			sendElevatorState <- state
+		}
+	}
+
+	
+
 }
+
+// func RunSlaveBrain(id string){
+
+
+// 			for {
+// 				select {
+// 				case <-time.After(1000 *time.Millisecond): //Simulates updating orders. 
+				
+// 						count++
+// 						msg := network.OrdersAndStateUpdate{
+// 							SourceId: id,
+// 							UpdateNr: count,
+// 							OrdersAndState: "Moren din er mann",
+// 						}
+
+// 						orderSender.UpdateAsyncGeneric(msg)
+						
+// 				case res := <-orderSender.AckResults:
+
+// 					//Check res.UpdateNr to check that the ACk is from the latest ctate change and is not old.
+// 					if res.Err != nil {
+// 						fmt.Println("Failed:", res.Err)
+// 					} else {
+// 						fmt.Println("ACK received for", res.UpdateNr)
+// 					}
+// 				}
+// 			}
+// }

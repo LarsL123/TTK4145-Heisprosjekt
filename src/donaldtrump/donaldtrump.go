@@ -1,9 +1,8 @@
 package donaldtrump
 
 import (
-	"Network-go/network/bcast"
-	"elevatorproject/src/config"
-	"elevatorproject/src/network"
+	"elevatorproject/src/ordermanager"
+	"elevatorproject/src/types"
 	"fmt"
 	"time"
 )
@@ -16,63 +15,133 @@ import (
 
 */
 
-func RunMasterBrain(id string){
-		isMaster := make(chan bool)
-		slaveUpdate := network.StartMaster(id, isMaster)
+const N_FLOORS = 4
+const N_BUTTONS = 3
 
-		receiveOrdersAndStateUpdateCh := make(chan network.OrdersAndStateUpdate)
-		orderAndStateAckCh := make(chan network.OrdersAndStateAck)
-		
+    // Set test input
+	// input := HRAInput{
+    //     HallRequests: [4][2]bool{{false, false}, {true, false}, {false, false}, {false, true}},
+    //     States: map[string]HRAElevState{
+    //         "one": {
+    //             Behavior:       "moving",
+    //             Floor:          3,
+    //             Direction:      "down",
+    //             CabRequests:    [4]bool{false, false, false, true},
+    //         },
+    //         "two": {
+    //             Behavior:       "idle",
+    //             Floor:          0,
+    //             Direction:      "stop",
+    //             CabRequests:    [4]bool{false, false, false, false},
+    //         },
+    //     },
+    // }
 
-		sendAssignmentCh := make(chan network.AssignmentsAndOrders)
-		assignmentAckCh := make(chan network.AssignementsAndOrdersAck)
-
-
-		go bcast.Receiver(config.Cfg.MasterListenPort,receiveOrdersAndStateUpdateCh, assignmentAckCh)
-		go bcast.Transmitter(config.Cfg.SlaveListenPort, orderAndStateAckCh, sendAssignmentCh)
-
-
-		assignmentSender := &network.GenericSender[network.AssignmentsAndOrders, network.AssignementsAndOrdersAck]{
-			SendCh: sendAssignmentCh,
-			AckIn: assignmentAckCh,
-			AckResults: make(chan network.AckResult, 10), // buffered OBS-OBS!! DO i need this??
-		}
-
-		msg := network.AssignmentsAndOrders{
-					SourceId: id,
-					UpdateNr: 1,
-					OrdersAndState: "Ice will come to your home",
-				}
-		assignmentSender.UpdateAsyncGeneric(msg)
-
-		count := 1
-
-		for {
-			select{
-			case p := <-slaveUpdate:
-				fmt.Printf("Slave update:\n")
-				fmt.Printf("  Slaves:    %q\n", p.Slaves)
-				fmt.Printf("  New:      %q\n", p.New)
-				fmt.Printf("  Lost:     %q\n", p.Lost)
-			case data := <- receiveOrdersAndStateUpdateCh: //Constant ack
-				fmt.Printf("Received from slave: %s \n", data.OrdersAndState)
-				fmt.Printf("count %d \n", count)
-				count++
-
-				if count > 3 {
-					orderAndStateAckCh <- network.OrdersAndStateAck{UpdateNr: data.UpdateNr}
-				}
-
-			case <-time.After(6*time.Second): //New assignment to be distrebuted. 
-				fmt.Println("Sending new assignments. ")
-
-				msg := network.AssignmentsAndOrders{
-					SourceId: id,
-					UpdateNr: 1,
-					OrdersAndState: "Ice will come to your home",
-				}
-				
-				assignmentSender.UpdateAsyncGeneric(msg)
-			}
-		}
+type masterData struct {
+	hallRequests [4][2]bool
+	states map[string] types.ElevatorState
+	timeSinceUpdate map[string] time.Time
 }
+
+
+func RunMasterBrain(id string){
+	masterData := masterData{
+        states: make(map[string]types.ElevatorState),
+        timeSinceUpdate: make(map[string] time.Time),
+    }
+
+
+
+	ordersCh := make(chan ordermanager.HRAInput)
+	assignmentsCh := make(chan map[string][][2]bool)
+	go ordermanager.ManageOrders(ordersCh, assignmentsCh)
+
+    reciveElevatorCh := make(chan types.ElevatorState)
+
+	for{
+		select{
+            case elevatorData := <- reciveElevatorCh:
+                masterData.states[elevatorData.ID] = elevatorData
+                fmt.Println("Recived data from: ", elevatorData.ID)
+                
+            case assignemnt := <- assignmentsCh:
+                fmt.Println(assignemnt)
+
+            case <- time.After(time.Second *3):
+                ordersCh <- ordermanager.ToHRAInput(masterData.hallRequests, masterData.states)
+
+		}
+
+	}
+	
+
+
+	
+}
+
+
+
+
+// func RunMasterBrain(id string){
+
+// 	ordersCh := make(chan ordermanager.HRAInput)
+// 	assignmentsCh := make(chan map[string][][2]bool)
+// 	go ordermanager.ManageOrders(ordersCh, assignmentsCh)
+
+
+
+// 	isMaster := make(chan bool)
+// 	slaveUpdate := network.StartMaster(id, isMaster)
+
+// 	receiveOrdersAndStateUpdateCh := make(chan network.OrdersAndStateUpdate)
+// 	orderAndStateAckCh := make(chan network.OrdersAndStateAck)
+	
+
+// 	sendAssignmentCh := make(chan network.AssignmentsAndOrders)
+// 	assignmentAckCh := make(chan network.AssignementsAndOrdersAck)
+
+
+// 	go bcast.Receiver(config.Cfg.MasterListenPort,receiveOrdersAndStateUpdateCh, assignmentAckCh)
+// 	go bcast.Transmitter(config.Cfg.SlaveListenPort, orderAndStateAckCh, sendAssignmentCh)
+
+
+// 	assignmentSender := &network.GenericSender[network.AssignmentsAndOrders, network.AssignementsAndOrdersAck]{
+// 		SendCh: sendAssignmentCh,
+// 		AckIn: assignmentAckCh,
+// 		AckResults: make(chan network.AckResult, 10), // buffered OBS-OBS!! DO i need this??
+// 	}
+
+// 	msg := network.AssignmentsAndOrders{
+// 				SourceId: id,
+// 				UpdateNr: 1,
+// 				OrdersAndState: "Ice will come to your home",
+// 			}
+// 	assignmentSender.UpdateAsyncGeneric(msg)
+
+// 	for {
+// 		select{
+// 		case p := <-slaveUpdate:
+// 			fmt.Printf("Slave update:\n")
+// 			fmt.Printf("  Slaves:    %q\n", p.Slaves)
+// 			fmt.Printf("  New:      %q\n", p.New)
+// 			fmt.Printf("  Lost:     %q\n", p.Lost)
+
+
+// 		case data := <- receiveOrdersAndStateUpdateCh: //Constant ack
+// 			fmt.Printf("Received from slave: %s \n", data.OrdersAndState)
+			
+
+
+// 		case <-time.After(6*time.Second): //New assignment to be distrebuted. 
+// 			fmt.Println("Sending new assignments. ")
+
+// 			msg := network.AssignmentsAndOrders{
+// 				SourceId: id,
+// 				UpdateNr: 1,
+// 				OrdersAndState: "Ice will come to your home",
+// 			}
+			
+// 			assignmentSender.UpdateAsyncGeneric(msg)
+// 		}
+// 	}
+// }

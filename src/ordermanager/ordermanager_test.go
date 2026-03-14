@@ -1,8 +1,8 @@
 package ordermanager
 
 import (
-    "testing"
-    "fmt"
+	"fmt"
+	"testing"
 )
 
 func TestCostFunction(t *testing.T) {
@@ -12,19 +12,19 @@ func TestCostFunction(t *testing.T) {
 
     // Set test input
 	input := HRAInput{
-        HallRequests: [][2]bool{{false, false}, {true, false}, {false, false}, {false, true}},
+        HallRequests: [4][2]bool{{false, false}, {true, false}, {false, false}, {false, true}},
         States: map[string]HRAElevState{
             "one": {
                 Behavior:       "moving",
                 Floor:          3,
                 Direction:      "down",
-                CabRequests:    []bool{false, false, false, true},
+                CabRequests:    [4]bool{false, false, false, true},
             },
             "two": {
                 Behavior:       "idle",
                 Floor:          0,
                 Direction:      "stop",
-                CabRequests:    []bool{false, false, false, false},
+                CabRequests:    [4]bool{false, false, false, false},
             },
         },
     }

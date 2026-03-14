@@ -8,6 +8,7 @@ import (
 
 	"elevatorproject/src/config"
 	"elevatorproject/src/elevio"
+	"elevatorproject/src/types"
 )
 
 const N_FLOORS = 4
@@ -17,7 +18,7 @@ const address = "0.0.0.0:15657"
 const N_BUTTONS = 3
 const DOOR_OPEN_DURATION = 3 // [seconds]
 
-func elevatorManager(elevStateCh chan<-Elevator ,sendOrderCh chan elevio.ButtonEvent, sendFinishedOrderch chan []elevio.ButtonEvent, receiveAssignmentsCh chan [N_FLOORS][N_BUTTONS]bool) {
+func ElevatorManager(elevStateCh chan<-types.ElevatorState ,sendOrderCh chan elevio.ButtonEvent, sendFinishedOrderch chan []elevio.ButtonEvent, receiveAssignmentsCh chan [N_FLOORS][N_BUTTONS]bool) {
 	// Spørsmål til studass: er det greit å heller definere elevator på package level, slipper dermed å passe elevator pointer til alle funksjonene som skal endre på den??
 
 	elevio.Init(address, N_FLOORS)
@@ -63,8 +64,14 @@ func elevatorManager(elevStateCh chan<-Elevator ,sendOrderCh chan elevio.ButtonE
 		case obstruction := <-driverObstructionCh:
 			fsm_onObstruction(obstruction)
 
-		case <- sendStateTicker.C:
-			fsm_sendElevatorState(elevStateCh)
+		case <- sendStateTicker.C: 
+			elevStateCh <- types.ElevatorState{ //Export interface so we dont have to expose Elevator internals. Daniel remove comment when read. 
+				Floor: elevator.floor,
+				Direction: dirnToString(elevator.dirn),
+				Behaviour: behaviourToString(elevator.behaviour),
+				CabRequests: fsm_getCabRequests(),
+				CreatedAt: time.Now(),
+			}
 		}
 	
 	}

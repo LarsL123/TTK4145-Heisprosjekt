@@ -10,10 +10,22 @@ var elevator = Elevator{floor: -1,
 	behaviour:        EB_Idle,
 	doorOpenDuration: 3.0,
 	dirn:             elevio.MD_Down,
-	obstructed:       false}
+	obstructed:       false,
+
+	}
 
 func fsm_sendElevatorState(sendCh chan<- Elevator){
 	sendCh <- elevator
+}
+
+func fsm_getCabRequests() [4]bool { //Daniel kan endre om denne er dårlig men funker for nå.
+	cabRequests := [4]bool{}
+
+	for i := 0; i < N_FLOORS; i++ {
+		cabRequests[i] = elevator.requests[i][elevio.BT_Cab]
+	}
+
+	return cabRequests
 }
 
 func fsm_setAllLights() {

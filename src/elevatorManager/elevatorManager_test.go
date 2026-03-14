@@ -3,6 +3,7 @@ package elevatormanager
 import (
 	"elevatorproject/src/config"
 	"elevatorproject/src/elevio"
+	"elevatorproject/src/types"
 	"fmt"
 	"testing"
 	"time"
@@ -58,9 +59,9 @@ func TestSingleElevator(t *testing.T) {
 	receiveOrdersCh := make(chan elevio.ButtonEvent)
 	receiveFinishedOrderCh := make(chan []elevio.ButtonEvent)
 	sendAssignmentsCh := make(chan [N_FLOORS][N_BUTTONS]bool)
-	receiveElevatorState := make(chan Elevator)
+	receiveElevatorState := make(chan types.ElevatorState)
 
-	go elevatorManager(receiveElevatorState,receiveOrdersCh, receiveFinishedOrderCh, sendAssignmentsCh)
+	go ElevatorManager(receiveElevatorState,receiveOrdersCh, receiveFinishedOrderCh, sendAssignmentsCh)
 
 	var requests [N_FLOORS][N_BUTTONS]bool
 
@@ -74,7 +75,7 @@ func TestSingleElevator(t *testing.T) {
 				requests[request.Floor][request.Button] = false
 			}
 		case data :=  <- receiveElevatorState:
-			fmt.Println("The elevator is currently: ", data.behaviour)
+			fmt.Println("The elevator is currently: ", data.Behaviour)
 		}
 	}
 }

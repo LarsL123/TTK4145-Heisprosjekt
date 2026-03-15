@@ -46,3 +46,10 @@ arrows and that the module interfaces becomes perfect abstractions.
 ▶ Either: Design the perfect module interface that satisfies the
 use-cases - or recurse from 2.
 7. Implement.
+
+
+
+Brage som tester reelection på egen pc:
+
+sudo ip route add 255.255.255.255 dev lo
+sudo ip route del 255.255.255.255 dev lo

@@ -24,10 +24,14 @@ func RunSlaveBrain(id string){
 
 	for {
 		select{
-		case state:=  <- receiveElevatorState:
+		case state :=  <- receiveElevatorState:
 			state.ID = id
 			sendElevatorState <- state
+
+		case <-receiveOrdersCh:
+		case <- receiveFinishedOrderCh:
 		}
+
 	}
 
 	

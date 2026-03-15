@@ -46,6 +46,7 @@ type masterData struct {
 
 func RunMasterBrain(id string){
 	masterData := masterData{
+        hallRequests: [4][2]bool{{false, false}, {true, false}, {false, false}, {false, true}},
         states: make(map[string]types.ElevatorState),
         timeSinceUpdate: make(map[string] time.Time),
     }

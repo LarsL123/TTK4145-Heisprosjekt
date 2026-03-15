@@ -32,6 +32,7 @@ trap cleanup EXIT INT TERM
 gnome-terminal -- bash -c "cd ../src/reelection; go test -run Test4; exec bash" &
 gnome-terminal -- bash -c "cd ../src/reelection; go test -run Test2; exec bash" &
 gnome-terminal -- bash -c "cd ../src/reelection; go test -run Test3; exec bash" &
+# gnome-terminal -- bash -c "cd ../src/reelection; go test -run Test5; exec bash" &
 
 
 # Keep script alive until Ctrl+C

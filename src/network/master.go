@@ -30,20 +30,20 @@ type Heartbeat struct{
 	IP string //Not in use. Hope we dont need it. 
 }
 
-func StartMaster(id string, ctx context.Context) chan SlaveUpdate{
+func StartMaster(id string, ctx context.Context) {//chan SlaveUpdate{
 		go SendHeartbeats(id,Master, ctx)
 
-		heartBeatCh := make(chan Heartbeat)
-		go bcast.Receiver(config.Cfg.HeartbeatReplyPort, heartBeatCh)
+		// heartBeatCh := make(chan Heartbeat)
+		// go bcast.Receiver(config.Cfg.HeartbeatReplyPort, heartBeatCh)
 
-		slaveUpdate := make(chan SlaveUpdate)
-		go TrackSlaves(heartBeatCh, slaveUpdate, ctx)
+		// slaveUpdate := make(chan SlaveUpdate)
+		// go TrackSlaves(heartBeatCh, slaveUpdate, ctx)
 
-		return slaveUpdate
+		// return slaveUpdate
 }
 
 func StartBackup(id string, ctx context.Context){
-		go SendHeartbeats(id,Backup, ctx)
+		go SendHeartbeats(id, Backup, ctx)
 }
 
 
@@ -64,6 +64,7 @@ func SendHeartbeats(id string, role Role, ctx context.Context) {
 	for {
 		select {
 			case <- ctx.Done():
+				fmt.Println("Not sending heartbeats anymore: ", id, role)
 				return
 			case <-time.After(config.Cfg.HeartbeatInterval):
 				sendCh <- heartbeat

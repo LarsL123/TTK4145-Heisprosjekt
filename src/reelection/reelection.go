@@ -29,8 +29,8 @@ import (
 func InitReelection(selfId string) {
 
 	heartbeatCh := make(chan network.Heartbeat)
-	masterHearbeatCh := make(chan string) // Buffered? Check
-	backupHeartbeatCh := make(chan string) // Buffered? Check
+	masterHearbeatCh := make(chan string, 10) // Buffered? Check
+	backupHeartbeatCh := make(chan string, 10) // Buffered? Check
 	roleCh := make(chan network.Role, 1) // Should only be one role at a time
 
 	// Receives and splits heartbeats based on role into separate channels
@@ -76,24 +76,40 @@ func InitReelection(selfId string) {
 // Split heartbeats into separte channels, only containing their IDs
 func SplitHeartbeats(selfID string, heartbeatCh chan network.Heartbeat, masterHeartbeatCh chan string, backupHeartbeatCh chan string) {
 
-	for {
-		heartbeat := <- heartbeatCh
-		
-		if (heartbeat.Role == network.Master) {
-			if(heartbeat.ID != selfID){
-				// fmt.Println("Master heartbeat: ", heartbeat.ID, heartbeat.Role)
-				masterHeartbeatCh <- heartbeat.ID
-			}
+	for heartbeat := range heartbeatCh {
+
+		if heartbeat.ID == selfID {
+			continue
 		}
 
-		if (heartbeat.Role == network.Backup) {
-			if(heartbeat.ID != selfID){
-				fmt.Println("YAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
-				//fmt.Println("Backup heartbeat: ", heartbeat.ID, heartbeat.Role)
-				backupHeartbeatCh <- heartbeat.ID
-			}
+		switch heartbeat.Role {
+
+		case network.Master:
+			masterHeartbeatCh <- heartbeat.ID
+
+		case network.Backup:
+			backupHeartbeatCh <- heartbeat.ID
 		}
 	}
+
+	// for {
+	// 	heartbeat := <- heartbeatCh
+		
+	// 	if (heartbeat.Role == network.Master) {
+	// 		if(heartbeat.ID != selfID){
+	// 			fmt.Println("Master heartbeat: ", heartbeat.ID, heartbeat.Role)
+	// 			masterHeartbeatCh <- heartbeat.ID
+	// 		}
+	// 	}
+
+	// 	if (heartbeat.Role == network.Backup) {
+	// 		if(heartbeat.ID != selfID){
+	// 			// fmt.Println("YAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+	// 			fmt.Println("Backup heartbeat: ", heartbeat.ID, heartbeat.Role)
+	// 			backupHeartbeatCh <- heartbeat.ID
+	// 		}
+	// 	}
+	// }
 }
 
 // If another masters exists, set self to slave
@@ -107,7 +123,6 @@ func DetectMasterConflict(selfID string, masterHeartbeatCh chan string, roleCh c
 
 
 	for {
-		
 		<- masterHeartbeatCh
 
 		// Conflict detected -> Suicide

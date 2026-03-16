@@ -23,7 +23,7 @@ func RunSlaveBrain(id string) {
 	sendElevatorState := make(chan types.ElevatorState)
 	go bcast.Transmitter(config.Cfg.MasterListenPort, sendElevatorState)
 
-	receiveAssignmentsFromMasterCh := make(chan types.Assignements) //Denne skal vel egentlig bli passet som funksjonsparameter
+	receiveAssignmentsFromMasterCh := make(chan types.Assignments) //Denne skal vel egentlig bli passet som funksjonsparameter
 
 	go bcast.Receiver(config.Cfg.SlaveListenPort, receiveAssignmentsFromMasterCh )
 

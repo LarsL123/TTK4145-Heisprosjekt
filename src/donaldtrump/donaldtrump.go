@@ -20,71 +20,70 @@ import (
 const N_FLOORS = 4
 const N_BUTTONS = 3
 
-    // Set test input
-	// input := HRAInput{
-    //     HallRequests: [4][2]bool{{false, false}, {true, false}, {false, false}, {false, true}},
-    //     States: map[string]HRAElevState{
-    //         "one": {
-    //             Behavior:       "moving",
-    //             Floor:          3,
-    //             Direction:      "down",
-    //             CabRequests:    [4]bool{false, false, false, true},
-    //         },
-    //         "two": {
-    //             Behavior:       "idle",
-    //             Floor:          0,
-    //             Direction:      "stop",
-    //             CabRequests:    [4]bool{false, false, false, false},
-    //         },
-    //     },
-    // }
+// Set test input
+// input := HRAInput{
+//     HallRequests: [4][2]bool{{false, false}, {true, false}, {false, false}, {false, true}},
+//     States: map[string]HRAElevState{
+//         "one": {
+//             Behavior:       "moving",
+//             Floor:          3,
+//             Direction:      "down",
+//             CabRequests:    [4]bool{false, false, false, true},
+//         },
+//         "two": {
+//             Behavior:       "idle",
+//             Floor:          0,
+//             Direction:      "stop",
+//             CabRequests:    [4]bool{false, false, false, false},
+//         },
+//     },
+// }
 
 type masterData struct {
-	hallRequests [4][2]bool
-	states map[string] types.ElevatorState
-	timeSinceUpdate map[string] time.Time
+	hallRequests    [4][2]bool
+	states          map[string]types.ElevatorState
+	timeSinceUpdate map[string]time.Time
 }
 
-
-func RunMasterBrain(id string){
+func RunMasterBrain(id string) {
 	masterData := masterData{
-        hallRequests: [4][2]bool{{false, false}, {true, false}, {false, false}, {false, true}},
-        states: make(map[string]types.ElevatorState),
-        timeSinceUpdate: make(map[string] time.Time),
-    }
-
-
+		hallRequests:    [4][2]bool{{false, false}, {true, false}, {false, false}, {false, true}},
+		states:          make(map[string]types.ElevatorState),
+		timeSinceUpdate: make(map[string]time.Time),
+	}
 
 	ordersCh := make(chan ordermanager.HRAInput)
 	assignmentsCh := make(chan map[string][4][2]bool)
 	go ordermanager.ManageOrders(ordersCh, assignmentsCh)
 
-    receiveElevatorCh := make(chan types.ElevatorState)
+	receiveElevatorCh := make(chan types.ElevatorState)
+	go bcast.Receiver(config.Cfg.MasterListenPort, receiveElevatorCh)
 
-    go bcast.Receiver(config.Cfg.MasterListenPort, receiveElevatorCh)
+	sendAssignmentsCh := make(chan types.Assignments)
+	go bcast.Transmitter(config.Cfg.SlaveListenPort, sendAssignmentsCh)
 
-    sendAssignemnetsCh := make(chan types.Assignements)
+	for {
+		select {
+            
+            // Order received
+		    case elevatorData := <-receiveElevatorCh:
 
-     go bcast.Transmitter(config.Cfg.SlaveListenPort, sendAssignemnetsCh )
-
-	for{
-		select{
-            case elevatorData := <- receiveElevatorCh:
-                masterData.states[elevatorData.ID] = elevatorData
-                if elevatorData.Floor == -1{
-                    continue
-                }
-                fmt.Println("Recived data from: ", elevatorData.ID)
+		    	masterData.states[elevatorData.ID] = elevatorData
+		    	
+                if elevatorData.Floor == -1 {
+		    		continue
+		    	}
+		    	fmt.Println("Recived data from: ", elevatorData.ID)
                 ordersCh <- ordermanager.ToHRAInput(masterData.hallRequests, masterData.states)
-                
-            case assignment := <- assignmentsCh:
-                fmt.Println(assignment)
-                fmt.Println("Sending back")
-                sendAssignemnetsCh <- types.Assignements{Data: assignment}
-		}
-	}	
-}
+		    // Assignment ready
+		    case assignment := <-assignmentsCh:
+		    	fmt.Println(assignment)
+		    	fmt.Println("Sending back")
+		    	sendAssignmentsCh <- types.Assignments{Data: assignment}
 
+		}
+}
+}
 
 // func RunMasterBrain(id string){
 
@@ -92,22 +91,17 @@ func RunMasterBrain(id string){
 // 	assignmentsCh := make(chan map[string][][2]bool)
 // 	go ordermanager.ManageOrders(ordersCh, assignmentsCh)
 
-
-
 // 	isMaster := make(chan bool)
 // 	slaveUpdate := network.StartMaster(id, isMaster)
 
 // 	receiveOrdersAndStateUpdateCh := make(chan network.OrdersAndStateUpdate)
 // 	orderAndStateAckCh := make(chan network.OrdersAndStateAck)
-	
 
 // 	sendAssignmentCh := make(chan network.AssignmentsAndOrders)
 // 	assignmentAckCh := make(chan network.AssignementsAndOrdersAck)
 
-
 // 	go bcast.Receiver(config.Cfg.MasterListenPort,receiveOrdersAndStateUpdateCh, assignmentAckCh)
 // 	go bcast.Transmitter(config.Cfg.SlaveListenPort, orderAndStateAckCh, sendAssignmentCh)
-
 
 // 	assignmentSender := &network.GenericSender[network.AssignmentsAndOrders, network.AssignementsAndOrdersAck]{
 // 		SendCh: sendAssignmentCh,
@@ -130,13 +124,10 @@ func RunMasterBrain(id string){
 // 			fmt.Printf("  New:      %q\n", p.New)
 // 			fmt.Printf("  Lost:     %q\n", p.Lost)
 
-
 // 		case data := <- receiveOrdersAndStateUpdateCh: //Constant ack
 // 			fmt.Printf("Received from slave: %s \n", data.OrdersAndState)
-			
 
-
-// 		case <-time.After(6*time.Second): //New assignment to be distrebuted. 
+// 		case <-time.After(6*time.Second): //New assignment to be distrebuted.
 // 			fmt.Println("Sending new assignments. ")
 
 // 			msg := network.AssignmentsAndOrders{
@@ -144,7 +135,7 @@ func RunMasterBrain(id string){
 // 				UpdateNr: 1,
 // 				OrdersAndState: "Ice will come to your home",
 // 			}
-			
+
 // 			assignmentSender.UpdateAsyncGeneric(msg)
 // 		}
 // 	}

@@ -17,10 +17,15 @@ type HallOrder struct {
 	Direction string
 	Timestamp time.Time
 }
-type Assignements struct {
+type Assignments struct {
 	Data map[string][4][2]bool
 }
 
 type cabOrder struct {
 	Floor int
+}
+
+type RawMasterData struct {
+    HallRequests [4][2]bool
+    States       map[string]ElevatorState
 }

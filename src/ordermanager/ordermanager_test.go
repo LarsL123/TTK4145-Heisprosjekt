@@ -8,7 +8,7 @@ import (
 func TestCostFunction(t *testing.T) {
 
 	OrdersCh := make(chan HRAInput)
-    AssignmentsCh := make(chan map[string][][2]bool)
+    AssignmentsCh := make(chan map[string][4][2]bool)
 
     // Set test input
 	input := HRAInput{

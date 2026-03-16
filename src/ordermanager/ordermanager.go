@@ -30,6 +30,7 @@ import (
 	"fmt"
 	"os/exec"
 	"runtime"
+    "time"
 	// "golang.org/x/text/cases"
 )
 
@@ -48,6 +49,7 @@ type HRAInput struct {
     States          map[string]HRAElevState     `json:"states"`
 }
 
+// Combines hallrequests and elevatorstates
 func ToHRAInput(hallRequests [4][2]bool, elevatorStates map[string] types.ElevatorState) HRAInput{
 
     inputStates := make(map[string]HRAElevState)
@@ -67,8 +69,37 @@ func ToHRAInput(hallRequests [4][2]bool, elevatorStates map[string] types.Elevat
     }
 }
 
+/*
+// Fetches the states of a single elevator
+func HRAInputToState(input HRAInput, id string) HRAElevState{
+
+    return input.States[id]
+    
+}
+*/
+
+func orderTimeout(id string, state types.ElevatorState, deadCh chan<- string) {
+    orderTimer := time.After(10 * time.Second)
+
+    var blockTimer <-chan time.Time
+    if state.Obstructed {
+        blockTimer = time.After(5 * time.Second)
+    }
+
+    select {
+    case <-orderTimer:
+        fmt.Printf("Elevator %s did not complete assignment in time\n", id)
+        deadCh <- id
+
+    case <-blockTimer: // nil if not obstructed, so never fires
+        fmt.Printf("Elevator %s obstructed too long\n", id)
+        deadCh <- id
+    }
+}
+
+
 // Calculates optimal assignments based on orders
-func ManageOrders(OrdersCh chan HRAInput, AssignmentsCh chan map[string][4][2]bool){
+func ManageOrders(inputCh chan types.RawMasterData, assignmentsCh chan map[string][4][2]bool, deadCh chan<- string){
 
     hraExecutable := ""
     switch runtime.GOOS {
@@ -79,13 +110,28 @@ func ManageOrders(OrdersCh chan HRAInput, AssignmentsCh chan map[string][4][2]bo
 
     for {
 
-        // Order is received on input channel
-        input := <- OrdersCh
+        // Orders are received
+        rawOrder := <- inputCh
+        // HER SKAL order INNEHOLDE OBSTRUCTION, order må være av typen types.ElevatorState
 
-        fmt.Println(input)
+        // Filter obstructed elevators before HRA
+        filtered := make(map[string]types.ElevatorState)
+        for id, state := range rawOrder.States {
+            if !state.Obstructed {
+                filtered[id] = state
+            }
+        }
+
+        hraOrder := ToHRAInput(rawOrder.HallRequests, filtered)
+
+        // Parse using ToHRAInput(hallRequests, elevatorStates)
+        // Important for the rest of the program to work
+        //
+
+        fmt.Println(hraOrder)
 
         // JSON -> String
-        jsonBytes, err := json.Marshal(input)
+        jsonBytes, err := json.Marshal(hraOrder)
         if err != nil {
             fmt.Println("json.Marshal error: ", err)
             return
@@ -99,16 +145,46 @@ func ManageOrders(OrdersCh chan HRAInput, AssignmentsCh chan map[string][4][2]bo
             return
         }
 
-        output := new(map[string][4][2]bool)
+        assignment := new(map[string][4][2]bool)
 
         // Update output map with executable data, String -> JSON
-        err = json.Unmarshal(ret, &output)
+        err = json.Unmarshal(ret, &assignment)
         if err != nil {
             fmt.Println("json.Unmarshal error: ", err)
             return
         }
 
-        // Pass optimal assignments to output channel
-        AssignmentsCh <- *output;
+        // Start timers only for elevators that got assignments
+        for id, orders := range *assignment {
+            if hasActiveOrder(orders) {
+                go orderTimeout(id, rawOrder.States[id], deadCh)
+            }
+        }
+
+        // Pass optimal assignments
+        assignmentsCh <- *assignment;
     }
 }
+
+func hasActiveOrder(orders [4][2]bool) bool {
+    for _, floor := range orders {
+        for _, req := range floor {
+            if req {
+                return true
+            }
+        }
+    }
+    return false
+}
+
+
+/*
+
+Brage note (16.03.2026 20:30):
+
+Head is not working, tomorrow I need to setup logic such that:
+
+- Each elevator that gets an assignment from the cost function gets a timer on their head to complete it. If the timer is not passed, then suspend the elevator
+- Each elevator that gets obstructed for a set amount of time gets suspended. If obstruction stops, then remove suspension
+
+*/

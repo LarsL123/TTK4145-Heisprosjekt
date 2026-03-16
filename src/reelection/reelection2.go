@@ -51,6 +51,7 @@ func ReelectionFSM(selfID string, heartbeatCh chan network.Heartbeat) {
         }
     }
 
+    // Set initial role
     startRole(network.Slave)
 
     for {

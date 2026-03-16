@@ -81,3 +81,53 @@ func TestNy4(t *testing.T){
 	select{}
 
 }
+
+func TestNy5(t *testing.T){
+
+	config.Load()
+
+	go InitReelection2("5")
+
+	select{}
+
+}
+
+func TestNy6(t *testing.T){
+
+	config.Load()
+
+	go InitReelection2("6")
+
+	select{}
+
+}
+
+func TestNy7(t *testing.T){
+
+	config.Load()
+
+	go InitReelection2("7")
+
+	select{}
+
+}
+
+func TestNy8(t *testing.T){
+
+	config.Load()
+
+	go InitReelection2("8")
+
+	select{}
+
+}
+
+func TestNy9(t *testing.T){
+
+	config.Load()
+
+	go InitReelection2("9")
+
+	select{}
+
+}

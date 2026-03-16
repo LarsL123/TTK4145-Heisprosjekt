@@ -1,5 +1,11 @@
 package network
 
+import (
+	"context"
+	"sync"
+	"elevatorproject/src/types"
+)
+
 type NetMessage interface {
     GetUpdateNr() int
 }
@@ -52,7 +58,9 @@ func (s AssignementsAndOrdersAck) GetUpdateNr() int{
     return s.UpdateNr
 }
 
-
+type ResendableOrder{
+    Order types.Order
+}
 
 
 // type AssignmentSender struct {

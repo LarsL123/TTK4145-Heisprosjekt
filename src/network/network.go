@@ -2,53 +2,28 @@ package network
 
 import (
 	"elevatorproject/src/config"
+	"elevatorproject/src/types"
 	"fmt"
 	"sync"
 	"time"
 )
 
-// func (r *GenericSender[A, B]) SendAsyncWithAck(msg A) {
-// 	r.mu.Lock()
-// 	// cancel previous send if exists
-// 	if r.cancelLast != nil {
-// 		r.cancelLast()
-// 	}
-// 	ctx, cancel := context.WithCancel(context.Background())
-// 	r.cancelLast = cancel
-// 	r.lastUpdateNr = msg.GetUpdateNr()
-// 	r.mu.Unlock()
+func sendOrdersWithAck(sendOrdersCh chan types.HallOrder){
+	var orders []types.HallOrder  
+	resendTicker := time.NewTicker(config.Cfg.AckRetryRate)
+	for {
+		select{
+		case order := <- sendOrdersCh:
+			orders = append(orders, order)
 
-// 	go func() {
-// 		retryTicker := time.NewTicker(config.Cfg.AckRetryRate)
-// 		defer retryTicker.Stop()
+		case <-resendTicker.C:
+            for i, order := range orders{
+                if order.
+            }
 
-// 		timeoutTimer := time.NewTimer(config.Cfg.AckTimeout)
-// 		defer timeoutTimer.Stop()
-
-// 		r.SendCh <- msg
-
-// 		for {
-// 			select {
-// 			case <-ctx.Done():
-// 				// new message canceled this send
-// 				return
-// 			case <-retryTicker.C:
-// 				r.SendCh <- msg
-// 				fmt.Printf("\n---------------------------ACK-----------------------------------\n")
-// 			case ack := <-r.AckIn:
-// 				fmt.Println(ack.GetUpdateNr() == msg.GetUpdateNr())
-// 				if ack.GetUpdateNr() == msg.GetUpdateNr() {
-// 					r.AckResults <- AckResult{ack.GetUpdateNr(), nil}
-// 					return
-// 				}
-// 				// ignore ACKs for older messages or other units
-// 			case <-timeoutTimer.C:
-// 				r.AckResults <- AckResult{msg.GetUpdateNr(), fmt.Errorf("timeout waiting for ack assignmentSender")}
-// 				return
-// 			}
-// 		}
-// 	}()
-// }
+		}
+	}
+}
 
 // func (r *GenericSender[A, B]) SendAsyncWithAck(msg A) {
 // 	r.mu.Lock()

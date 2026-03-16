@@ -99,7 +99,7 @@ func RunMasterBrain(id string) {
 
 		case assignment := <-calculatedAssignementsCh:
 			fmt.Println(assignment)
-			fmt.Println("Sending back")
+			//fmt.Println("Sending back")
 			sendAssignemnetsCh <- types.Assignements{Data: assignment}
 
 		case elevatorData := <-updateStreamCh:

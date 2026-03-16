@@ -25,7 +25,6 @@ func RunSlaveBrain(id string) {
 	sendAssignmentsCh := make(chan [N_FLOORS][N_BUTTONS]bool)
 	sendElevatorState := make(chan types.ElevatorState)
 
-
 	go elevatormanager.ElevatorManager(receiveElevatorState, receiveOrdersCh, receiveFinishedAssignmentsCh, sendAssignmentsCh)
 
 	//Init Order ack
@@ -37,9 +36,9 @@ func RunSlaveBrain(id string) {
 		AckIn:      hallOrderAck,
 		AckResults: make(chan network.AckResult, 10), // buffered
 	}
+	orderSender.StartAckDispatcher()
 
-
-	// Finished Assignments setup 
+	// Finished Assignments setup
 	sendFinishedAssignmentsCh := make(chan types.FinishedHallAssignments)
 	finishedOrdersAckCh := make(chan types.FinishedHallAssignmentsAck)
 
@@ -48,10 +47,8 @@ func RunSlaveBrain(id string) {
 		AckIn:      finishedOrdersAckCh,
 		AckResults: make(chan network.AckResult, 10), // buffered
 	}
+	completeAssignmentSender.StartAckDispatcher()
 
-
-
-	
 	go bcast.Transmitter(config.Cfg.MasterListenPort, sendElevatorState, sendOrdersCh, sendFinishedAssignmentsCh)
 
 	receiveAssignmentsFromMasterCh := make(chan types.Assignements) //Denne skal vel egentlig bli passet som funksjonsparameter

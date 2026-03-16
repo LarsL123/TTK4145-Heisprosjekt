@@ -37,78 +37,81 @@ import (
 // This means they must start with a capital letter, so we need to use field renaming struct tags to make them camelCase
 
 type HRAElevState struct {
-    Behavior    string      `json:"behaviour"`
-    Floor       int         `json:"floor"` 
-    Direction   string      `json:"direction"`
-    CabRequests [4]bool      `json:"cabRequests"`
+	Behavior    string  `json:"behaviour"`
+	Floor       int     `json:"floor"`
+	Direction   string  `json:"direction"`
+	CabRequests [4]bool `json:"cabRequests"`
 }
 
 type HRAInput struct {
-    HallRequests    [4][2]bool                   `json:"hallRequests"`
-    States          map[string]HRAElevState     `json:"states"`
+	HallRequests [4][2]bool              `json:"hallRequests"`
+	States       map[string]HRAElevState `json:"states"`
 }
 
-func ToHRAInput(hallRequests [4][2]bool, elevatorStates map[string] types.ElevatorState) HRAInput{
+func ToHRAInput(hallRequests [4][2]bool, elevatorStates map[string]types.ElevatorState) HRAInput {
 
-    inputStates := make(map[string]HRAElevState)
+	inputStates := make(map[string]HRAElevState)
 
-    for id, elevatorState := range elevatorStates{
-        inputStates[id] = HRAElevState{
-            Behavior: elevatorState.Behaviour,
-            Floor:elevatorState.Floor,
-            Direction: elevatorState.Direction,
-            CabRequests: elevatorState.CabRequests,
-        }
-    }
+	for id, elevatorState := range elevatorStates {
+		inputStates[id] = HRAElevState{
+			Behavior:    elevatorState.Behaviour,
+			Floor:       elevatorState.Floor,
+			Direction:   elevatorState.Direction,
+			CabRequests: elevatorState.CabRequests,
+		}
+	}
 
-    return HRAInput{
-        HallRequests: hallRequests,
-        States: inputStates,
-    }
+	return HRAInput{
+		HallRequests: hallRequests,
+		States:       inputStates,
+	}
 }
 
 // Calculates optimal assignments based on orders
-func ManageOrders(OrdersCh chan HRAInput, AssignmentsCh chan map[string][4][2]bool){
+func ManageOrders(OrdersCh chan HRAInput, AssignmentsCh chan map[string][4][2]bool) {
 
-    hraExecutable := ""
-    switch runtime.GOOS {
-        case "linux":   hraExecutable  = "hall_request_assigner"
-        case "windows": hraExecutable  = "hall_request_assigner.exe"
-        default:        panic("OS not supported")
-    }
+	hraExecutable := ""
+	switch runtime.GOOS {
+	case "linux":
+		hraExecutable = "hall_request_assigner"
+	case "windows":
+		hraExecutable = "hall_request_assigner.exe"
+	default:
+		panic("OS not supported")
+	}
 
-    for {
+	for {
 
-        // Order is received on input channel
-        input := <- OrdersCh
+		// Order is received on input channel
+		input := <-OrdersCh
 
-        fmt.Println(input)
+		// fmt.Println(input)
 
-        // JSON -> String
-        jsonBytes, err := json.Marshal(input)
-        if err != nil {
-            fmt.Println("json.Marshal error: ", err)
-            return
-        }
-    
-        // Run cost function executable
-        ret, err := exec.Command("./src/ordermanager/"+hraExecutable, "-i", string(jsonBytes)).CombinedOutput()
-        if err != nil {
-            fmt.Println("exec.Command error: ", err)
-            fmt.Println(string(ret))
-            return
-        }
+		// JSON -> String
+		jsonBytes, err := json.Marshal(input)
+		if err != nil {
+			fmt.Println("json.Marshal error: ", err)
+			return
+		}
 
-        output := new(map[string][4][2]bool)
+		// Run cost function executable
+		ret, err := exec.Command("./src/ordermanager/"+hraExecutable, "-i", string(jsonBytes)).CombinedOutput()
+		if err != nil {
+			fmt.Println("exec.Command error: ", err)
+			fmt.Println(string(ret))
+			return
+		}
 
-        // Update output map with executable data, String -> JSON
-        err = json.Unmarshal(ret, &output)
-        if err != nil {
-            fmt.Println("json.Unmarshal error: ", err)
-            return
-        }
+		output := new(map[string][4][2]bool)
 
-        // Pass optimal assignments to output channel
-        AssignmentsCh <- *output;
-    }
+		// Update output map with executable data, String -> JSON
+		err = json.Unmarshal(ret, &output)
+		if err != nil {
+			fmt.Println("json.Unmarshal error: ", err)
+			return
+		}
+
+		// Pass optimal assignments to output channel
+		AssignmentsCh <- *output
+	}
 }

@@ -76,7 +76,7 @@ func RunMasterBrain(id string) {
 		select {
 
 		case <-assignmentTicker.C:
-			//ordersCh <- ordermanager.ToHRAInput(masterData.hallRequests, masterData.states) //Loopes back to case
+			ordersCh <- ordermanager.ToHRAInput(masterData.hallRequests, masterData.states) //Loopes back to case
 
 		case orderReceived := <-receiveElevatorOrdersCh:
 			fmt.Println("Reciving order")

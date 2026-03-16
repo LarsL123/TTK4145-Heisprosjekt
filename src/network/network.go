@@ -1,7 +1,6 @@
 package network
 
 import (
-	"context"
 	"elevatorproject/src/config"
 	"fmt"
 	"sync"
@@ -117,15 +116,12 @@ type GenericSender[SenderType NetMessage, ReciverType NetMessage] struct {
     AckIn      <-chan ReciverType
     AckResults chan AckResult
 
-    mu         sync.Mutex
-    cancelLast context.CancelFunc
+    mu           sync.Mutex
     lastUpdateNr int
-
-    // Map of updateNr → channel to receive the ACK
-    ackMap sync.Map // map[int]chan ReciverType
+    ackMap       sync.Map // map[int]chan ReciverType
 }
 
-// Start a dispatcher goroutine that routes incoming ACKs to the correct channel
+// Dispatcher forwards ACKs to the correct channel
 func (r *GenericSender[A, B]) StartAckDispatcher() {
     go func() {
         for ack := range r.AckIn {
@@ -134,36 +130,27 @@ func (r *GenericSender[A, B]) StartAckDispatcher() {
                 ch := chInterface.(chan B)
                 select {
                 case ch <- ack:
-                    // ACK delivered to the waiting goroutine
+                    // delivered
                 default:
-                    // If goroutine already timed out, ignore
+                    // goroutine already finished (timeout or done)
                 }
-            } else {
-                // ACK not expected or already processed
             }
         }
     }()
 }
 
 func (r *GenericSender[A, B]) SendAsyncWithAck(msg A) {
-    r.mu.Lock()
-    // cancel previous send if needed
-    if r.cancelLast != nil {
-        r.cancelLast()
-    }
-    ctx, cancel := context.WithCancel(context.Background())
-    r.cancelLast = cancel
     updateNr := msg.GetUpdateNr()
-    r.lastUpdateNr = updateNr
-    r.mu.Unlock()
 
-    // Create a dedicated channel for this send's ACK
+    // Each message gets its own ACK channel
     ackCh := make(chan B, 1)
     r.ackMap.Store(updateNr, ackCh)
+    defer func() {
+        // Clean up after ACK or timeout
+        r.ackMap.Delete(updateNr)
+    }()
 
     go func() {
-        defer r.ackMap.Delete(updateNr) // cleanup when done
-
         retryTicker := time.NewTicker(config.Cfg.AckRetryRate)
         defer retryTicker.Stop()
 
@@ -174,14 +161,11 @@ func (r *GenericSender[A, B]) SendAsyncWithAck(msg A) {
 
         for {
             select {
-            case <-ctx.Done():
-                // canceled by a newer message
-                return
             case <-retryTicker.C:
                 r.SendCh <- msg // retry
                 fmt.Printf("\n---------------------------ACK RETRY-----------------------------------\n")
             case ack := <-ackCh:
-                // ACK received for this message
+                // ACK received
                 r.AckResults <- AckResult{ack.GetUpdateNr(), nil}
                 return
             case <-timeoutTimer.C:
@@ -191,7 +175,6 @@ func (r *GenericSender[A, B]) SendAsyncWithAck(msg A) {
         }
     }()
 }
-
 // type GenericSender [SenderType NetMessage, ReciverType NetMessage] struct {
 //     SendCh     chan<- SenderType
 //     AckIn      <-chan ReciverType

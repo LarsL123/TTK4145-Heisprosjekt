@@ -84,7 +84,7 @@ func RunMasterBrain(id string) {
 					continue
 				}
 				masterData.hallRequests[order.Floor][order.Type] = false
-				fmt.Printf("Assignment cleared, floor: %d, type: %d ", order.Floor, order.Type)
+				fmt.Printf("Assignment cleared, floor: %d, type: %d \n", order.Floor, order.Type)
 			}
 
 			ackAssignementCompleted <- types.FinishedHallAssignmentsAck{

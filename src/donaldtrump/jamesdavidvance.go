@@ -15,16 +15,18 @@ import (
 func RunSlaveBrain(id string) {
 
 	var readyToSendOrder bool = true
-	var count int = 0
+	var messageCount int = 0
 	// Recive from elevatorManager, send to master.
 
 	receiveOrdersCh := make(chan types.Order)
-	receiveFinishedOrderCh := make(chan []elevio.ButtonEvent)
-
-	sendAssignmentsCh := make(chan [N_FLOORS][N_BUTTONS]bool)
+	receiveFinishedAssignmentsCh := make(chan []elevio.ButtonEvent)
 	receiveElevatorState := make(chan types.ElevatorState)
 
-	go elevatormanager.ElevatorManager(receiveElevatorState, receiveOrdersCh, receiveFinishedOrderCh, sendAssignmentsCh)
+	sendAssignmentsCh := make(chan [N_FLOORS][N_BUTTONS]bool)
+
+	go elevatormanager.ElevatorManager(receiveElevatorState, receiveOrdersCh, receiveFinishedAssignmentsCh, sendAssignmentsCh)
+	
+	
 	//Init Order ack
 	sendOrdersCh := make(chan types.HallOrder)
 	hallOrderAck := make(chan types.HallOrderAck)
@@ -65,14 +67,14 @@ func RunSlaveBrain(id string) {
 				slaveRequests[order.Floor][order.Type] = true //TODO: have to save this somewhere if the elevator dies and is revived
 				sendAssignmentsCh <- slaveRequests
 			} else if readyToSendOrder {
-				count += 1
+				messageCount += 1
 				readyToSendOrder = false
 				idtoInt, _ := strconv.Atoi(id)
 				ho := types.HallOrder{
 					Floor:     order.Floor,
 					Direction: int(order.Type),
 					Timestamp: time.Now(),
-					UpdateNr:  idtoInt*1000000 + count,
+					UpdateNr:  idtoInt*1000000 + messageCount,
 				}
 				orderSender.SendAsyncWithAck(ho)
 			}
@@ -87,12 +89,12 @@ func RunSlaveBrain(id string) {
 			// Need to agree on format
 			// Er også mulig å kjøre requests[order.Floor][order.Button] = true
 			// For så å sende?? Dette blir nok buggy siden heisen kanskje tar requesten med en gang i så fall.
-		case finishedOrders := <-receiveFinishedOrderCh:
+		case finishedOrders := <-receiveFinishedAssignmentsCh:
 			fmt.Println("DEN GÅR GJENNOM FSM!!")
 			idtoInt, _ := strconv.Atoi(id)
-			count += 1
+			messageCount += 1
 			sendToMaster := types.FinishedHallAssignments{
-				UpdateNr:  idtoInt*1000000 + count,
+				UpdateNr:  idtoInt*1000000 + messageCount,
 				Timestamp: time.Now(),
 				Orders:    make([]types.Order, len(finishedOrders)),
 			}
@@ -122,7 +124,6 @@ func RunSlaveBrain(id string) {
 			sendAssignmentsCh <- slaveRequests
 		}
 	}
-
 }
 
 // func RunSlaveBrain(id string){

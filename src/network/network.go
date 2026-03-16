@@ -33,10 +33,10 @@ func (r *GenericSender[A, B]) SendAsyncWithAck(msg A) {
 				// new message canceled this send
 				return
 			case <-retryTicker.C:
-				fmt.Println("ACCCCCCCCCCCCC")
 				r.SendCh <- msg
+				fmt.Printf("\n---------------------------ACK-----------------------------------\n")
 			case ack := <-r.AckIn:
-				fmt.Println("Fikk ack")
+				fmt.Println(ack.GetUpdateNr() == msg.GetUpdateNr())
 				if ack.GetUpdateNr() == msg.GetUpdateNr() {
 					r.AckResults <- AckResult{ack.GetUpdateNr(), nil}
 					return

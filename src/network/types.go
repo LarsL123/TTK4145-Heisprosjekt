@@ -1,10 +1,5 @@
 package network
 
-import (
-	"context"
-	"sync"
-)
-
 type NetMessage interface {
     GetUpdateNr() int
 }
@@ -14,15 +9,7 @@ type AckResult struct {
     Err      error
 }
 
-type GenericSender [SenderType NetMessage, ReciverType NetMessage] struct {
-    SendCh     chan<- SenderType
-    AckIn      <-chan ReciverType
-    AckResults chan AckResult
 
-    cancelLast   context.CancelFunc // cancel previous pending send
-    mu           sync.Mutex 
-    lastUpdateNr int // Must use to prevent confict between different slaves
-}
 
 //Maye this should just be an envolope for ack logic??
 type OrdersAndStateUpdate struct {

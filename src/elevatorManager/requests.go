@@ -92,6 +92,7 @@ func requestsShouldStop() bool {
 	}
 }
 
+// NB Side effect: requests på samme heis til samme etasje som heisen er på med dør åpen blir ikke sendt til master
 func requestShouldClearImmediately(buttonRequest elevio.ButtonEvent) bool {
 	//TODO: fix chooseDirection
 	return (elevator.floor == buttonRequest.Floor) && ((elevator.dirn == elevio.MD_Up && buttonRequest.Button == elevio.BT_HallUp) ||
@@ -103,7 +104,7 @@ func requestShouldClearImmediately(buttonRequest elevio.ButtonEvent) bool {
 //Lars: Wow for et monster ja. Post birken activity å rydde. 
 
 // Denne sender per nå også til orderHandler, burde kanskje implementeres i annen kode, men nå er det sånn.
-// Det er en bug her, noen ganger så clearer ikke denne alltid. Dermed ender testfunksjonen noen ganger med å ikke cleare requests med en gang.  tipper det er pga at det er en buffered channel og at vi sender hver gang.  Skal prøve å fikse på bussen imorra. Må også cleane opp spaghettikoden.
+// Må også cleane opp spaghettikoden.
 func requests_clearAtCurrentFloor(sendClearedRequests chan []elevio.ButtonEvent) {
 	// TODO: fix clearatcurrentfloor
 	clearedRequestArray := make([]elevio.ButtonEvent, 0)

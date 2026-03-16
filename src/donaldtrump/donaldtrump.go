@@ -108,8 +108,6 @@ func RunMasterBrain(id string) {
 				continue
 			}
 			fmt.Println("Recived data from: ", elevatorData.ID)
-
 		}
-
 	}
 }

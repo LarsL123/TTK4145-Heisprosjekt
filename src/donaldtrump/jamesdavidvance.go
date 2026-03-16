@@ -18,42 +18,63 @@ func RunSlaveBrain(id string) {
 	var messageCount int = 0
 	// Recive from elevatorManager, send to master.
 
-	receiveOrdersCh := make(chan types.Order)
+	receiveOrdersFromElevCh := make(chan types.Order)
 	receiveFinishedAssignmentsCh := make(chan []elevio.ButtonEvent)
 	receiveElevatorState := make(chan types.ElevatorState)
 
-	sendAssignmentsCh := make(chan [N_FLOORS][N_BUTTONS]bool)
+	sendAssignmentsToElevCh := make(chan [N_FLOORS][N_BUTTONS]bool)
 	sendElevatorState := make(chan types.ElevatorState)
 
-	go elevatormanager.ElevatorManager(receiveElevatorState, receiveOrdersCh, receiveFinishedAssignmentsCh, sendAssignmentsCh)
 
-	//Init Order ack
-	sendOrdersCh := make(chan types.HallOrder)
-	hallOrderAck := make(chan types.HallOrderAck)
+	go elevatormanager.ElevatorManager(receiveElevatorState, receiveOrdersFromElevCh, receiveFinishedAssignmentsCh, sendAssignmentsToElevCh)
 
-	orderSender := &network.GenericSender[types.HallOrder, types.HallOrderAck]{
-		SendCh:     sendOrdersCh,
-		AckIn:      hallOrderAck,
-		AckResults: make(chan network.AckResult, 10), // buffered
-	}
-	orderSender.StartAckDispatcher()
 
-	// Finished Assignments setup
+
+	sendOrdersToMasterCh := make(chan types.HallOrder)
+	hallOrderAckCh := make(chan types.HallOrderAck)
+	sendOrdersFromElevatorch := make(chan types.HallOrder)
 	sendFinishedAssignmentsCh := make(chan types.FinishedHallAssignments)
-	finishedOrdersAckCh := make(chan types.FinishedHallAssignmentsAck)
 
-	completeAssignmentSender := &network.GenericSender[types.FinishedHallAssignments, types.FinishedHallAssignmentsAck]{
-		SendCh:     sendFinishedAssignmentsCh,
-		AckIn:      finishedOrdersAckCh,
-		AckResults: make(chan network.AckResult, 10), // buffered
-	}
-	completeAssignmentSender.StartAckDispatcher()
 
-	go bcast.Transmitter(config.Cfg.MasterListenPort, sendElevatorState, sendOrdersCh, sendFinishedAssignmentsCh)
+
+	go network.SendOrdersWithAck(sendOrdersFromElevatorch, sendOrdersToMasterCh,hallOrderAckCh)
+
+	
+	// //-------------Init Order ack (generic sender) ------------------- 
+	// sendOrdersCh := make(chan types.HallOrder)
+	// hallOrderAck := make(chan types.HallOrderAck)
+
+	// orderSender := &network.GenericSender[types.HallOrder, types.HallOrderAck]{
+	// 	SendCh:     sendOrdersCh,
+	// 	AckIn:      hallOrderAck,
+	// 	AckResults: make(chan network.AckResult, 10), // buffered
+	// }
+	// orderSender.StartAckDispatcher()
+
+
+
+	// // Finished Assignments setup
+	// sendFinishedAssignmentsCh := make(chan types.FinishedHallAssignments)
+	// finishedOrdersAckCh := make(chan types.FinishedHallAssignmentsAck)
+
+	// completeAssignmentSender := &network.GenericSender[types.FinishedHallAssignments, types.FinishedHallAssignmentsAck]{
+	// 	SendCh:     sendFinishedAssignmentsCh,
+	// 	AckIn:      finishedOrdersAckCh,
+	// 	AckResults: make(chan network.AckResult, 10), // buffered
+	// }
+	// completeAssignmentSender.StartAckDispatcher()
+
+
+
+
+
+	go bcast.Transmitter(config.Cfg.MasterListenPort, sendElevatorState, sendOrdersToMasterCh, sendFinishedAssignmentsCh)
 
 	receiveAssignmentsFromMasterCh := make(chan types.Assignements) //Denne skal vel egentlig bli passet som funksjonsparameter
 
-	go bcast.Receiver(config.Cfg.SlaveListenPort, receiveAssignmentsFromMasterCh, hallOrderAck, finishedOrdersAckCh)
+
+	// TODO: Daniel fortsett her imorra med å legge inn ferdig ack
+	go bcast.Receiver(config.Cfg.SlaveListenPort, receiveAssignmentsFromMasterCh, hallOrderAckCh, finishedOrdersAckCh)
 
 	var slaveRequests [N_FLOORS][N_BUTTONS]bool
 
@@ -64,10 +85,10 @@ func RunSlaveBrain(id string) {
 			state.ID = id
 			sendElevatorState <- state
 
-		case order := <-receiveOrdersCh:
+		case order := <-receiveOrdersFromElevCh:
 			if order.Type == types.Cab {
 				slaveRequests[order.Floor][order.Type] = true //TODO: have to save this somewhere if the elevator dies and is revived
-				sendAssignmentsCh <- slaveRequests
+				sendAssignmentsToElevCh <- slaveRequests
 			} else if readyToSendOrder {
 				messageCount += 1
 				//readyToSendOrder = false
@@ -123,7 +144,7 @@ func RunSlaveBrain(id string) {
 				slaveRequests[i][1] = assignments.Data[id][i][1]
 			}
 			// TODO: turn on lights of other
-			sendAssignmentsCh <- slaveRequests
+			sendAssignmentsToElevCh <- slaveRequests
 		}
 	}
 }

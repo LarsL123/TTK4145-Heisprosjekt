@@ -11,7 +11,7 @@ type ElevatorState struct {
 	CreatedAt        time.Time
 }
 
-type hallOrder struct {
+type HallOrder struct {
 	Floor int
 	Direction string
 	Timestamp time.Time

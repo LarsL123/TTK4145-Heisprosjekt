@@ -53,16 +53,16 @@ func RunMasterBrain(id string) {
 	}
 
 	ordersCh := make(chan ordermanager.HRAInput)
-	assignmentsCh := make(chan map[string][4][2]bool)
-	go ordermanager.ManageOrders(ordersCh, assignmentsCh)
+	calculatedAssignementsCh := make(chan map[string][4][2]bool)
+	go ordermanager.ManageOrders(ordersCh, calculatedAssignementsCh)
 
-	receiveElevatorCh := make(chan types.ElevatorState)
+	stateUpdateCh := make(chan types.ElevatorState)
 
 	receiveElevatorOrdersCh := make(chan types.HallOrder)
 	sendOrderAckCh := make(chan types.HallOrderAck)
 
-	assignmentsCompleted := make(chan types.FinishedHallAssignments)
-	go bcast.Receiver(config.Cfg.MasterListenPort, receiveElevatorCh, receiveElevatorOrdersCh, assignmentsCompleted)
+	reciveAssignmentComplete := make(chan types.FinishedHallAssignments)
+	go bcast.Receiver(config.Cfg.MasterListenPort, stateUpdateCh, receiveElevatorOrdersCh, reciveAssignmentComplete)
 
 	sendAssignemnetsCh := make(chan types.Assignements)
 	ackAssignementCompleted := make(chan types.FinishedHallAssignmentsAck)
@@ -71,7 +71,7 @@ func RunMasterBrain(id string) {
 
 	for {
 		select {
-		case elevatorData := <-receiveElevatorCh:
+		case elevatorData := <-stateUpdateCh:
 			masterData.states[elevatorData.ID] = elevatorData
 			if elevatorData.Floor == -1 {
 				continue
@@ -79,17 +79,13 @@ func RunMasterBrain(id string) {
 			fmt.Println("Recived data from: ", elevatorData.ID)
 			//ordersCh <- ordermanager.ToHRAInput(masterData.hallRequests, masterData.states)
 
-		case assignment := <-assignmentsCh:
-			fmt.Println(assignment)
-			fmt.Println("Sending back")
-			sendAssignemnetsCh <- types.Assignements{Data: assignment}
 		case orderReceived := <-receiveElevatorOrdersCh:
 			fmt.Println("Reciving order")
 			sendOrderAckCh <- types.HallOrderAck{UpdateNr: orderReceived.GetUpdateNr()}
 			masterData.hallRequests[orderReceived.Floor][orderReceived.Direction] = true
 			ordersCh <- ordermanager.ToHRAInput(masterData.hallRequests, masterData.states)
 
-		case completedAssignments := <-assignmentsCompleted:
+		case completedAssignments := <-reciveAssignmentComplete:
 			for _, order := range completedAssignments.Orders {
 				if order.Type == types.Cab {
 					continue
@@ -101,6 +97,11 @@ func RunMasterBrain(id string) {
 			ackAssignementCompleted <- types.FinishedHallAssignmentsAck{
 				UpdateNr: completedAssignments.GetUpdateNr(),
 			}
+
+		case assignment := <-calculatedAssignementsCh:
+			fmt.Println(assignment)
+			fmt.Println("Sending back")
+			sendAssignemnetsCh <- types.Assignements{Data: assignment}
 
 		}
 

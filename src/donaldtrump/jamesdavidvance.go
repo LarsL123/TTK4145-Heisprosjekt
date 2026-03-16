@@ -55,6 +55,7 @@ func RunSlaveBrain(id string) {
 
 	for {
 		select {
+
 		case state := <-receiveElevatorState:
 			state.ID = id
 			sendElevatorState <- state
@@ -87,6 +88,7 @@ func RunSlaveBrain(id string) {
 			// Er også mulig å kjøre requests[order.Floor][order.Button] = true
 			// For så å sende?? Dette blir nok buggy siden heisen kanskje tar requesten med en gang i så fall.
 		case finishedOrders := <-receiveFinishedOrderCh:
+			fmt.Println("DEN GÅR GJENNOM FSM!!")
 			idtoInt, _ := strconv.Atoi(id)
 			count += 1
 			sendToMaster := types.FinishedHallAssignments{

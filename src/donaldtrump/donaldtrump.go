@@ -1,6 +1,8 @@
 package donaldtrump
 
 import (
+	"Network-go/network/bcast"
+	"elevatorproject/src/config"
 	"elevatorproject/src/ordermanager"
 	"elevatorproject/src/types"
 	"fmt"
@@ -54,33 +56,34 @@ func RunMasterBrain(id string){
 
 
 	ordersCh := make(chan ordermanager.HRAInput)
-	assignmentsCh := make(chan map[string][][2]bool)
+	assignmentsCh := make(chan map[string][4][2]bool)
 	go ordermanager.ManageOrders(ordersCh, assignmentsCh)
 
     reciveElevatorCh := make(chan types.ElevatorState)
+
+    go bcast.Receiver(config.Cfg.MasterListenPort, reciveElevatorCh)
+
+    sendAssignemnetsCh := make(chan types.Assignements)
+
+     go bcast.Transmitter(config.Cfg.SlaveListenPort, sendAssignemnetsCh )
 
 	for{
 		select{
             case elevatorData := <- reciveElevatorCh:
                 masterData.states[elevatorData.ID] = elevatorData
+                if elevatorData.Floor == -1{
+                    continue
+                }
                 fmt.Println("Recived data from: ", elevatorData.ID)
+                ordersCh <- ordermanager.ToHRAInput(masterData.hallRequests, masterData.states)
                 
             case assignemnt := <- assignmentsCh:
                 fmt.Println(assignemnt)
-
-            case <- time.After(time.Second *3):
-                ordersCh <- ordermanager.ToHRAInput(masterData.hallRequests, masterData.states)
-
+                fmt.Println("Sending back")
+                sendAssignemnetsCh <- types.Assignements{Data: assignemnt}
 		}
-
-	}
-	
-
-
-	
+	}	
 }
-
-
 
 
 // func RunMasterBrain(id string){

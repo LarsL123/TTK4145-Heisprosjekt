@@ -68,7 +68,7 @@ func ToHRAInput(hallRequests [4][2]bool, elevatorStates map[string] types.Elevat
 }
 
 // Calculates optimal assignments based on orders
-func ManageOrders(OrdersCh chan HRAInput, AssignmentsCh chan map[string][][2]bool){
+func ManageOrders(OrdersCh chan HRAInput, AssignmentsCh chan map[string][4][2]bool){
 
     hraExecutable := ""
     switch runtime.GOOS {
@@ -82,6 +82,8 @@ func ManageOrders(OrdersCh chan HRAInput, AssignmentsCh chan map[string][][2]boo
         // Order is received on input channel
         input := <- OrdersCh
 
+        fmt.Println(input)
+
         // JSON -> String
         jsonBytes, err := json.Marshal(input)
         if err != nil {
@@ -90,14 +92,14 @@ func ManageOrders(OrdersCh chan HRAInput, AssignmentsCh chan map[string][][2]boo
         }
     
         // Run cost function executable
-        ret, err := exec.Command("./"+hraExecutable, "-i", string(jsonBytes)).CombinedOutput()
+        ret, err := exec.Command("./src/ordermanager/"+hraExecutable, "-i", string(jsonBytes)).CombinedOutput()
         if err != nil {
             fmt.Println("exec.Command error: ", err)
             fmt.Println(string(ret))
             return
         }
 
-        output := new(map[string][][2]bool)
+        output := new(map[string][4][2]bool)
 
         // Update output map with executable data, String -> JSON
         err = json.Unmarshal(ret, &output)

@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func (r *GenericSender[A, B]) UpdateAsyncGeneric(msg A) {
+func (r *GenericSender[A, B]) SendAsyncWithAck(msg A) {
     r.mu.Lock()
      // cancel previous send if exists
     if r.cancelLast != nil {

@@ -16,3 +16,6 @@ type hallOrder struct {
 	Direction string
 	Timestamp time.Time
 }
+type Assignements struct {
+	Data map[string][4][2]bool
+}

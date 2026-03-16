@@ -26,7 +26,7 @@ func TestSender(t *testing.T){
 
 	fmt.Println(msg.OrdersAndState)
 
-	orderSender.UpdateAsyncGeneric(msg)
+	orderSender.SendAsyncWithAck(msg)
 
 	res:=  <- orderSender.AckResults
 

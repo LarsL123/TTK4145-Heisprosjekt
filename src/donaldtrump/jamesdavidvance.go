@@ -113,18 +113,18 @@ func RunSlaveBrain(id string) {
 				// TODO: choose whether to send full requests or only changes
 			*/
 
-		case /*assignments := */ <-receiveAssignmentsFromMasterCh:
+		case assignments := <-receiveAssignmentsFromMasterCh:
 			// fmt.Println("Received assignments. Doing the work")
-			/*
-				fmt.Println(assignments.Data)
-				// Combine hall requests and cab requests before sending
-				for i := range slaveRequests {
-					slaveRequests[i][0] = assignments.Data[id][i][0]
-					slaveRequests[i][1] = assignments.Data[id][i][1]
-				}
-				// Turn on lights for other elevators
-				sendAssignmentsCh <- slaveRequests
-			*/
+
+			fmt.Println(assignments.Data)
+			// Combine hall requests and cab requests before sending
+			for i := range slaveRequests {
+				slaveRequests[i][0] = assignments.Data[id][i][0]
+				slaveRequests[i][1] = assignments.Data[id][i][1]
+			}
+			// Turn on lights for other elevators
+			sendAssignmentsCh <- slaveRequests
+
 		}
 	}
 }
@@ -142,7 +142,6 @@ func RunSlaveBrain(id string) {
 // 	sendAssignmentsCh := make(chan [N_FLOORS][N_BUTTONS]bool)
 // 	sendElevatorState := make(chan types.ElevatorState)
 
-
 // 	go elevatormanager.ElevatorManager(receiveElevatorState, receiveOrdersCh, receiveFinishedAssignmentsCh, sendAssignmentsCh)
 
 // 	//Init Order ack
@@ -155,8 +154,7 @@ func RunSlaveBrain(id string) {
 // 		AckResults: make(chan network.AckResult, 10), // buffered
 // 	}
 
-
-// 	// Finished Assignments setup 
+// 	// Finished Assignments setup
 // 	sendFinishedAssignmentsCh := make(chan types.FinishedHallAssignments)
 // 	finishedOrdersAckCh := make(chan types.FinishedHallAssignmentsAck)
 
@@ -166,9 +164,6 @@ func RunSlaveBrain(id string) {
 // 	// 	AckResults: make(chan network.AckResult, 10), // buffered
 // 	// }
 
-
-
-	
 // 	go bcast.Transmitter(config.Cfg.MasterListenPort, sendElevatorState, sendOrdersCh, sendFinishedAssignmentsCh)
 
 // 	receiveAssignmentsFromMasterCh := make(chan types.Assignements) //Denne skal vel egentlig bli passet som funksjonsparameter

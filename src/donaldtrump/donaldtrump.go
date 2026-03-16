@@ -97,10 +97,10 @@ func RunMasterBrain(id string) {
 			// 	UpdateNr: completedAssignments.GetUpdateNr(),
 			// }
 
-		case /*assignment := */<-calculatedAssignementsCh:
-			// fmt.Println(assignment)
-			// fmt.Println("Sending back")
-			// sendAssignemnetsCh <- types.Assignements{Data: assignment}
+		case assignment := <-calculatedAssignementsCh:
+			fmt.Println(assignment)
+			fmt.Println("Sending back")
+			sendAssignemnetsCh <- types.Assignements{Data: assignment}
 
 		case elevatorData := <-updateStreamCh:
 			masterData.states[elevatorData.ID] = elevatorData
@@ -113,4 +113,3 @@ func RunMasterBrain(id string) {
 
 	}
 }
-

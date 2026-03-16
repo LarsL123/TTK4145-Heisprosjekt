@@ -44,26 +44,26 @@ func buttonToString(button elevio.ButtonType) string {
 func dirnToString(dirn elevio.MotorDirection) string {
 	switch dirn {
 	case elevio.MD_Down:
-		return "MD_Down"
+		return "down"
 	case elevio.MD_Up:
-		return "MD_up"
+		return "up"
 	case elevio.MD_Stop:
-		return "MD_Stop"
+		return "stop"
 	default:
-		return "MD_Undefined"
+		return "undefined"
 	}
 }
 
 func behaviourToString(behaviour Behaviour) string {
 	switch behaviour {
 	case EB_Idle:
-		return "EB_Idle"
+		return "idle"
 	case EB_DoorOpen:
-		return "EB_DoorOpen"
+		return "doorOpen"
 	case EB_Moving:
-		return "EB_Moving"
+		return "moving"
 	default:
-		return "EB_Undefined"
+		return "undefined"
 	}
 }
 

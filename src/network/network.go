@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func sendOrdersWithAck(sendOrdersCh chan ResendableOrder) { // AckOrderCh chan AckOrders
+func sendOrdersWithAck(sendOrdersCh chan ResendableOrder, AckOrderCh chan AckOrders) {
 	var orders []ResendableOrder
 	resendTicker := time.NewTicker(config.Cfg.AckRetryRate)
 	for {
@@ -21,7 +21,8 @@ func sendOrdersWithAck(sendOrdersCh chan ResendableOrder) { // AckOrderCh chan A
 					sendOrdersCh <- order
 				}
 			}
-			//)   case AckedOrderId <-
+		case AckedOrder <- AckOrderCh:
+
 		}
 	}
 }

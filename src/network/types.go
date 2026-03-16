@@ -52,7 +52,7 @@ func (s AssignementsAndOrdersAck) GetUpdateNr() int {
 }
 
 type ResendableOrder struct {
-	Order types.Order
+	Order types.HallOrder
 	Acked bool
 }
 

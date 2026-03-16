@@ -1,47 +1,41 @@
 package network
 
 import (
-	"context"
-	"sync"
 	"elevatorproject/src/types"
 )
 
 type NetMessage interface {
-    GetUpdateNr() int
+	GetUpdateNr() int
 }
 
 type AckResult struct {
-    UpdateNr int
-    Err      error
+	UpdateNr int
+	Err      error
 }
 
-
-
-//Maye this should just be an envolope for ack logic??
+// Maye this should just be an envolope for ack logic??
 type OrdersAndStateUpdate struct {
-	SourceId string
-	UpdateNr int
+	SourceId       string
+	UpdateNr       int
 	OrdersAndState string //Custom type from daniea (mae7tro)
 }
 
 func (s OrdersAndStateUpdate) GetUpdateNr() int {
-    return s.UpdateNr  
+	return s.UpdateNr
 }
 
 type OrdersAndStateAck struct {
 	UpdateNr int
-    Err error
+	Err      error
 }
 
-func (s OrdersAndStateAck) GetUpdateNr() int{
-    return s.UpdateNr
+func (s OrdersAndStateAck) GetUpdateNr() int {
+	return s.UpdateNr
 }
-
-
 
 type AssignmentsAndOrders struct {
-    SourceId string
-	UpdateNr int
+	SourceId       string
+	UpdateNr       int
 	OrdersAndState string //Custom type from Brage Drage
 }
 
@@ -50,18 +44,17 @@ type AssignementsAndOrdersAck struct {
 }
 
 func (s AssignmentsAndOrders) GetUpdateNr() int {
-    return s.UpdateNr  
+	return s.UpdateNr
 }
 
-
-func (s AssignementsAndOrdersAck) GetUpdateNr() int{
-    return s.UpdateNr
+func (s AssignementsAndOrdersAck) GetUpdateNr() int {
+	return s.UpdateNr
 }
 
-type ResendableOrder{
-    Order types.Order
+type ResendableOrder struct {
+	Order types.Order
+	Acked bool
 }
-
 
 // type AssignmentSender struct {
 //     SendCh     chan<- AssignmentsAndOrders
@@ -69,7 +62,7 @@ type ResendableOrder{
 //     AckResults chan AckResult
 
 //     cancelLast   context.CancelFunc // cancel previous pending send
-//     mu           sync.Mutex 
+//     mu           sync.Mutex
 //     lastUpdateNr int // Must use to prevent confict between different slaves
 // }
 

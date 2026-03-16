@@ -17,6 +17,7 @@ import (
 
 // var masterip string  //Dont know hoe to do this properly.
 
+
 func StartSlave(id string) *GenericSender[OrdersAndStateUpdate, OrdersAndStateAck]{
 	go ReplyToHeartbeat(id)
 

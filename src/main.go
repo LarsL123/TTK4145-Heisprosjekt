@@ -6,8 +6,11 @@ import (
 	"flag"
 )
 
-//TODO: Denne fila burde bare initialisere modulene våre,
-// og kanalene de snakker sammen på
+// TODO: (slik jeg (Daniel) ser det nå (natt til mandag 16.03))
+// 1. Få til kommunikasjonen mellom slaves og master
+// 2. Etter det må vi få til initialiseringen, noe jeg tror vi har glemt litt
+// 3. Dukker sikkert opp noe mer vi har glemt 
+// 4. Rename Donald Trump og James David Vance
 
 func main(){
 	config.Load()

@@ -69,14 +69,20 @@ func RunMasterBrain(id string) {
 	sendOrderAckCh := make(chan types.HallOrderAck)
 	go bcast.Transmitter(config.Cfg.SlaveListenPort, sendAssignemnetsCh, sendOrderAckCh, ackAssignementCompleted)
 
+	assignmentTicker := time.NewTicker(1 * time.Second)
+	defer assignmentTicker.Stop()
+
 	for {
 		select {
+
+		case <-assignmentTicker.C:
+			ordersCh <- ordermanager.ToHRAInput(masterData.hallRequests, masterData.states) //Loopes back to case
+
 		case orderReceived := <-receiveElevatorOrdersCh:
 			fmt.Println("Reciving order")
 			sendOrderAckCh <- types.HallOrderAck{UpdateNr: orderReceived.GetUpdateNr()}
 
 			masterData.hallRequests[orderReceived.Floor][orderReceived.Direction] = true
-			ordersCh <- ordermanager.ToHRAInput(masterData.hallRequests, masterData.states) //Loopes back to case
 
 		case completedAssignments := <-reciveAssignmentComplete:
 			for _, order := range completedAssignments.Orders {

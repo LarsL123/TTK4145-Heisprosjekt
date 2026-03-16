@@ -50,6 +50,10 @@ func RunSlaveBrain(id string) {
 			// TODO: kombinere hallrequests og cabrequest før man sender
 			fmt.Println(assignments.Data)
 			// slaveRequests = assignments
+
+
+			for _, 
+
 			sendAssignmentsCh <- assignments.Data[id]
 		}
 	}

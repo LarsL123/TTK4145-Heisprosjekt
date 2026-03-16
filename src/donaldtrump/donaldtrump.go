@@ -59,9 +59,9 @@ func RunMasterBrain(id string){
 	assignmentsCh := make(chan map[string][4][2]bool)
 	go ordermanager.ManageOrders(ordersCh, assignmentsCh)
 
-    reciveElevatorCh := make(chan types.ElevatorState)
+    receiveElevatorCh := make(chan types.ElevatorState)
 
-    go bcast.Receiver(config.Cfg.MasterListenPort, reciveElevatorCh)
+    go bcast.Receiver(config.Cfg.MasterListenPort, receiveElevatorCh)
 
     sendAssignemnetsCh := make(chan types.Assignements)
 
@@ -69,7 +69,7 @@ func RunMasterBrain(id string){
 
 	for{
 		select{
-            case elevatorData := <- reciveElevatorCh:
+            case elevatorData := <- receiveElevatorCh:
                 masterData.states[elevatorData.ID] = elevatorData
                 if elevatorData.Floor == -1{
                     continue
@@ -77,10 +77,10 @@ func RunMasterBrain(id string){
                 fmt.Println("Recived data from: ", elevatorData.ID)
                 ordersCh <- ordermanager.ToHRAInput(masterData.hallRequests, masterData.states)
                 
-            case assignemnt := <- assignmentsCh:
-                fmt.Println(assignemnt)
+            case assignment := <- assignmentsCh:
+                fmt.Println(assignment)
                 fmt.Println("Sending back")
-                sendAssignemnetsCh <- types.Assignements{Data: assignemnt}
+                sendAssignemnetsCh <- types.Assignements{Data: assignment}
 		}
 	}	
 }

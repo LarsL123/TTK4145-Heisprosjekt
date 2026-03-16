@@ -5,24 +5,32 @@ import (
 	"fmt"
 	"sync"
 	"time"
+    "elevatorproject/src/types"
 )
 
-func sendOrdersWithAck(sendOrdersCh chan ResendableOrder, AckOrderCh chan AckOrders) {
-	var orders []ResendableOrder
+
+func SendOrdersWithAck(receiveOrdersFromSlaveCh chan types.HallOrder, sendOrdersToMasterCh chan types.HallOrder, AckOrderCh chan types.HallOrderAck) {
+	var orders = make(map[int]*ResendableOrder)
 	resendTicker := time.NewTicker(config.Cfg.AckRetryRate)
+
 	for {
 		select {
-		case order := <-sendOrdersCh:
-			orders = append(orders, order)
-
+		case order := <-receiveOrdersFromSlaveCh:
+			orders[order.UpdateNr] = &ResendableOrder{
+                Order: order,
+                Acked: false,
+            }
+            sendOrdersToMasterCh <- order
+            
 		case <-resendTicker.C:
 			for _, order := range orders {
 				if !order.Acked {
-					sendOrdersCh <- order
+					sendOrdersToMasterCh <- order.Order
 				}
 			}
-		case AckedOrder <- AckOrderCh:
-
+		case AckedOrder := <- AckOrderCh:
+            orders[AckedOrder.UpdateNr].Acked = true
+            fmt.Printf("Order %d acked\n", AckedOrder.UpdateNr)
 		}
 	}
 }

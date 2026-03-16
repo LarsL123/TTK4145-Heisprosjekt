@@ -76,7 +76,7 @@ func RunMasterBrain(id string) {
 		select {
 
 		case <-assignmentTicker.C:
-			ordersCh <- ordermanager.ToHRAInput(masterData.hallRequests, masterData.states) //Loopes back to case
+			//ordersCh <- ordermanager.ToHRAInput(masterData.hallRequests, masterData.states) //Loopes back to case
 
 		case orderReceived := <-receiveElevatorOrdersCh:
 			fmt.Println("Reciving order")
@@ -84,23 +84,23 @@ func RunMasterBrain(id string) {
 
 			masterData.hallRequests[orderReceived.Floor][orderReceived.Direction] = true
 
-		case completedAssignments := <-reciveAssignmentComplete:
-			for _, order := range completedAssignments.Orders {
-				if order.Type == types.Cab {
-					continue
-				}
-				masterData.hallRequests[order.Floor][order.Type] = false
-				fmt.Printf("Assignment cleared, floor: %d, type: %d \n", order.Floor, order.Type)
-			}
+		case /*completedAssignments :=*/ <-reciveAssignmentComplete:
+			// for _, order := range completedAssignments.Orders {
+			// 	if order.Type == types.Cab {
+			// 		continue
+			// 	}
+			// 	masterData.hallRequests[order.Floor][order.Type] = false
+			// 	fmt.Printf("Assignment cleared, floor: %d, type: %d \n", order.Floor, order.Type)
+			// }
 
-			ackAssignementCompleted <- types.FinishedHallAssignmentsAck{
-				UpdateNr: completedAssignments.GetUpdateNr(),
-			}
+			// ackAssignementCompleted <- types.FinishedHallAssignmentsAck{
+			// 	UpdateNr: completedAssignments.GetUpdateNr(),
+			// }
 
-		case assignment := <-calculatedAssignementsCh:
-			fmt.Println(assignment)
-			fmt.Println("Sending back")
-			sendAssignemnetsCh <- types.Assignements{Data: assignment}
+		case /*assignment := */<-calculatedAssignementsCh:
+			// fmt.Println(assignment)
+			// fmt.Println("Sending back")
+			// sendAssignemnetsCh <- types.Assignements{Data: assignment}
 
 		case elevatorData := <-updateStreamCh:
 			masterData.states[elevatorData.ID] = elevatorData

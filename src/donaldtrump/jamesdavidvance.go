@@ -6,7 +6,6 @@ import (
 	elevatormanager "elevatorproject/src/elevatorManager"
 	"elevatorproject/src/elevio"
 	"elevatorproject/src/types"
-	"fmt"
 )
 
 func RunSlaveBrain(id string) {
@@ -23,9 +22,7 @@ func RunSlaveBrain(id string) {
 	sendElevatorState := make(chan types.ElevatorState)
 	go bcast.Transmitter(config.Cfg.MasterListenPort, sendElevatorState)
 
-	receiveAssignmentsFromMasterCh := make(chan types.Assignements) //Denne skal vel egentlig bli passet som funksjonsparameter
-
-	go bcast.Receiver(config.Cfg.SlaveListenPort, receiveAssignmentsFromMasterCh )
+	receiveAssignmentsFromMasterCh := make(chan [N_FLOORS][N_BUTTONS]bool) //Denne skal vel egentlig bli passet som funksjonsparameter
 
 	var slaveRequests [N_FLOORS][N_BUTTONS]bool
 
@@ -46,11 +43,9 @@ func RunSlaveBrain(id string) {
 			// TODO: enten sende hele requests eller bare sende endringen videre til master
 			// Hvem vet hva som er best
 		case assignments := <-receiveAssignmentsFromMasterCh:
-			fmt.Println("Receved assignements. Doing the work")
 			// TODO: kombinere hallrequests og cabrequest før man sender
-			fmt.Println(assignments.Data)
-			// slaveRequests = assignments
-			sendAssignmentsCh <- assignments.Data[id]
+			slaveRequests = assignments
+			sendAssignmentsCh <- slaveRequests
 		}
 	}
 

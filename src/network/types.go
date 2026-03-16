@@ -4,10 +4,10 @@ type NetMessage interface {
     GetUpdateNr() int
 }
 
-type AckResult struct {
-    UpdateNr int
-    Err      error
-}
+// type AckResult struct {
+//     UpdateNr int
+//     Err      error
+// }
 
 
 

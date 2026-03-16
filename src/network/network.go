@@ -290,3 +290,74 @@ func (r *GenericSender[A, B]) SendAsyncWithAck(msg A) {
 //         }
 //     }()
 // }
+
+
+// AckResult represents the result of a sent message
+type AckResult struct {
+	UpdateNr int
+	Err      error
+}
+
+// AckListener manages ACKs for sent messages
+type AckListener struct {
+	pending     map[int]chan AckResult
+	mutex       sync.Mutex
+	timeout     time.Duration
+	incomingAck chan int // receives UpdateNr from network
+}
+
+// NewAckListener creates a new AckListener
+func NewAckListener(timeout time.Duration) *AckListener {
+	al := &AckListener{
+		pending:     make(map[int]chan AckResult),
+		timeout:     timeout,
+		incomingAck: make(chan int, 100),
+	}
+	go al.run()
+	return al
+}
+
+// WaitAck registers a message and waits for ACK or timeout
+func (al *AckListener) WaitAck(updateNr int) AckResult {
+	al.mutex.Lock()
+	ch := make(chan AckResult, 1)
+	al.pending[updateNr] = ch
+	al.mutex.Unlock()
+
+	select {
+	case res := <-ch:
+		return res
+	case <-time.After(al.timeout):
+		al.removePending(updateNr)
+		return AckResult{UpdateNr: updateNr, Err: fmt.Errorf("ACK timeout")}
+	}
+}
+
+// HandleAck should be called when a network ACK arrives
+func (al *AckListener) HandleAck(updateNr int) {
+	al.mutex.Lock()
+	defer al.mutex.Unlock()
+	if ch, ok := al.pending[updateNr]; ok {
+		ch <- AckResult{UpdateNr: updateNr, Err: nil}
+		delete(al.pending, updateNr)
+	}
+}
+
+// internal loop to process incoming ACKs
+func (al *AckListener) run() {
+	for updateNr := range al.incomingAck {
+		al.HandleAck(updateNr)
+	}
+}
+
+// helper to remove pending on timeout
+func (al *AckListener) removePending(updateNr int) {
+	al.mutex.Lock()
+	defer al.mutex.Unlock()
+	delete(al.pending, updateNr)
+}
+
+// External function to push ACK from network
+func (al *AckListener) PushAck(updateNr int) {
+	al.incomingAck <- updateNr
+}

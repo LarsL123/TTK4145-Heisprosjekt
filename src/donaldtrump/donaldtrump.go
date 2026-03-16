@@ -52,38 +52,31 @@ func RunMasterBrain(id string) {
 		timeSinceUpdate: make(map[string]time.Time),
 	}
 
+	//Order calculation
 	ordersCh := make(chan ordermanager.HRAInput)
 	calculatedAssignementsCh := make(chan map[string][4][2]bool)
 	go ordermanager.ManageOrders(ordersCh, calculatedAssignementsCh)
 
-	stateUpdateCh := make(chan types.ElevatorState)
-
+	//reciving channel
+	updateStreamCh := make(chan types.ElevatorState)
 	receiveElevatorOrdersCh := make(chan types.HallOrder)
-	sendOrderAckCh := make(chan types.HallOrderAck)
-
 	reciveAssignmentComplete := make(chan types.FinishedHallAssignments)
-	go bcast.Receiver(config.Cfg.MasterListenPort, stateUpdateCh, receiveElevatorOrdersCh, reciveAssignmentComplete)
+	go bcast.Receiver(config.Cfg.MasterListenPort, updateStreamCh, receiveElevatorOrdersCh, reciveAssignmentComplete)
 
+	//Sending channel
 	sendAssignemnetsCh := make(chan types.Assignements)
 	ackAssignementCompleted := make(chan types.FinishedHallAssignmentsAck)
-
+	sendOrderAckCh := make(chan types.HallOrderAck)
 	go bcast.Transmitter(config.Cfg.SlaveListenPort, sendAssignemnetsCh, sendOrderAckCh, ackAssignementCompleted)
 
 	for {
 		select {
-		case elevatorData := <-stateUpdateCh:
-			masterData.states[elevatorData.ID] = elevatorData
-			if elevatorData.Floor == -1 {
-				continue
-			}
-			fmt.Println("Recived data from: ", elevatorData.ID)
-			//ordersCh <- ordermanager.ToHRAInput(masterData.hallRequests, masterData.states)
-
 		case orderReceived := <-receiveElevatorOrdersCh:
 			fmt.Println("Reciving order")
 			sendOrderAckCh <- types.HallOrderAck{UpdateNr: orderReceived.GetUpdateNr()}
+
 			masterData.hallRequests[orderReceived.Floor][orderReceived.Direction] = true
-			ordersCh <- ordermanager.ToHRAInput(masterData.hallRequests, masterData.states)
+			ordersCh <- ordermanager.ToHRAInput(masterData.hallRequests, masterData.states) //Loopes back to case
 
 		case completedAssignments := <-reciveAssignmentComplete:
 			for _, order := range completedAssignments.Orders {
@@ -103,63 +96,14 @@ func RunMasterBrain(id string) {
 			fmt.Println("Sending back")
 			sendAssignemnetsCh <- types.Assignements{Data: assignment}
 
+		case elevatorData := <-updateStreamCh:
+			masterData.states[elevatorData.ID] = elevatorData
+			if elevatorData.Floor == -1 {
+				continue
+			}
+			fmt.Println("Recived data from: ", elevatorData.ID)
+
 		}
 
 	}
 }
-
-// func RunMasterBrain(id string){
-
-// 	ordersCh := make(chan ordermanager.HRAInput)
-// 	assignmentsCh := make(chan map[string][][2]bool)
-// 	go ordermanager.ManageOrders(ordersCh, assignmentsCh)
-
-// 	isMaster := make(chan bool)
-// 	slaveUpdate := network.StartMaster(id, isMaster)
-
-// 	receiveOrdersAndStateUpdateCh := make(chan network.OrdersAndStateUpdate)
-// 	orderAndStateAckCh := make(chan network.OrdersAndStateAck)
-
-// 	sendAssignmentCh := make(chan network.AssignmentsAndOrders)
-// 	assignmentAckCh := make(chan network.AssignementsAndOrdersAck)
-
-// 	go bcast.Receiver(config.Cfg.MasterListenPort,receiveOrdersAndStateUpdateCh, assignmentAckCh)
-// 	go bcast.Transmitter(config.Cfg.SlaveListenPort, orderAndStateAckCh, sendAssignmentCh)
-
-// 	assignmentSender := &network.GenericSender[network.AssignmentsAndOrders, network.AssignementsAndOrdersAck]{
-// 		SendCh: sendAssignmentCh,
-// 		AckIn: assignmentAckCh,
-// 		AckResults: make(chan network.AckResult, 10), // buffered OBS-OBS!! DO i need this??
-// 	}
-
-// 	msg := network.AssignmentsAndOrders{
-// 				SourceId: id,
-// 				UpdateNr: 1,
-// 				OrdersAndState: "Ice will come to your home",
-// 			}
-// 	assignmentSender.UpdateAsyncGeneric(msg)
-
-// 	for {
-// 		select{
-// 		case p := <-slaveUpdate:
-// 			fmt.Printf("Slave update:\n")
-// 			fmt.Printf("  Slaves:    %q\n", p.Slaves)
-// 			fmt.Printf("  New:      %q\n", p.New)
-// 			fmt.Printf("  Lost:     %q\n", p.Lost)
-
-// 		case data := <- receiveOrdersAndStateUpdateCh: //Constant ack
-// 			fmt.Printf("Received from slave: %s \n", data.OrdersAndState)
-
-// 		case <-time.After(6*time.Second): //New assignment to be distrebuted.
-// 			fmt.Println("Sending new assignments. ")
-
-// 			msg := network.AssignmentsAndOrders{
-// 				SourceId: id,
-// 				UpdateNr: 1,
-// 				OrdersAndState: "Ice will come to your home",
-// 			}
-
-// 			assignmentSender.UpdateAsyncGeneric(msg)
-// 		}
-// 	}
-// }

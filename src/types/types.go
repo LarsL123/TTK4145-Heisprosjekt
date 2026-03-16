@@ -10,3 +10,9 @@ type ElevatorState struct {
 	CabRequests      [4]bool
 	CreatedAt        time.Time
 }
+
+type hallOrder struct {
+	Floor int
+	Direction string
+	Timestamp time.Time
+}

@@ -56,7 +56,7 @@ func resetter_timer() {
 func TestSingleElevator(t *testing.T) {
 	config.Load()
 
-	receiveOrdersCh := make(chan elevio.ButtonEvent)
+	receiveOrdersCh := make(chan types.Order)
 	receiveFinishedOrderCh := make(chan []elevio.ButtonEvent)
 	sendAssignmentsCh := make(chan [N_FLOORS][N_BUTTONS]bool)
 	receiveElevatorState := make(chan types.ElevatorState)

@@ -2,6 +2,7 @@ package elevatormanager
 
 import (
 	"elevatorproject/src/elevio"
+	"elevatorproject/src/types"
 	"fmt"
 )
 
@@ -134,11 +135,16 @@ func fsm_onObstruction(obstruction bool) {
 	elevator.obstructed = obstruction
 }
 
-func fsm_onNewButtonRequest(buttonRequest elevio.ButtonEvent, sendOrderCh chan<- elevio.ButtonEvent) {
+func fsm_onNewButtonRequest(buttonRequest elevio.ButtonEvent, sendOrderCh chan<- types.Order) {
 	fmt.Printf("New %s order on floor %d", buttonToString(buttonRequest.Button), buttonRequest.Floor)
 	if elevator.behaviour == EB_DoorOpen && requestShouldClearImmediately(buttonRequest) {
 		doortimer_start()
 	} else {
-		sendOrderCh <- buttonRequest
+		order := types.Order{
+			Floor: buttonRequest.Floor,
+			Type: types.OrderType(buttonRequest.Button),
+		}
+
+		sendOrderCh <- order
 	}
 }

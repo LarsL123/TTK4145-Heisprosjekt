@@ -5,27 +5,51 @@ import (
 	"elevatorproject/src/config"
 	elevatormanager "elevatorproject/src/elevatorManager"
 	"elevatorproject/src/elevio"
+	"elevatorproject/src/network"
 	"elevatorproject/src/types"
 	"fmt"
+	"strconv"
+	"time"
 )
 
 func RunSlaveBrain(id string) {
+
+	var readyToSendOrder bool = true
+	var count int = 0
 	// Recive from elevatorManager, send to master.
 
-	receiveOrdersCh := make(chan elevio.ButtonEvent)
+	receiveOrdersCh := make(chan types.Order)
 	receiveFinishedOrderCh := make(chan []elevio.ButtonEvent)
 
 	sendAssignmentsCh := make(chan [N_FLOORS][N_BUTTONS]bool)
 	receiveElevatorState := make(chan types.ElevatorState)
 
 	go elevatormanager.ElevatorManager(receiveElevatorState, receiveOrdersCh, receiveFinishedOrderCh, sendAssignmentsCh)
+	//Init Order ack
+	sendOrdersCh := make(chan types.HallOrder)
+	hallOrderAck := make(chan types.HallOrderAck)
+
+	orderSender := &network.GenericSender[types.HallOrder, types.HallOrderAck]{
+		SendCh:     sendOrdersCh,
+		AckIn:      hallOrderAck,
+		AckResults: make(chan network.AckResult, 10), // buffered
+	}
+
+	finishedOrdersCh := make(chan types.FinishedHallAssignments)
+	finishedOrdersAckCh := make(chan types.FinishedHallAssignmentsAck)
+
+	completeAssignmentSender := &network.GenericSender[types.FinishedHallAssignments, types.FinishedHallAssignmentsAck]{
+		SendCh:     finishedOrdersCh,
+		AckIn:      finishedOrdersAckCh,
+		AckResults: make(chan network.AckResult, 10), // buffered
+	}
 
 	sendElevatorState := make(chan types.ElevatorState)
-	go bcast.Transmitter(config.Cfg.MasterListenPort, sendElevatorState)
+	go bcast.Transmitter(config.Cfg.MasterListenPort, sendElevatorState, sendOrdersCh, finishedOrdersCh)
 
 	receiveAssignmentsFromMasterCh := make(chan types.Assignements) //Denne skal vel egentlig bli passet som funksjonsparameter
 
-	go bcast.Receiver(config.Cfg.SlaveListenPort, receiveAssignmentsFromMasterCh )
+	go bcast.Receiver(config.Cfg.SlaveListenPort, receiveAssignmentsFromMasterCh, hallOrderAck, finishedOrdersAckCh)
 
 	var slaveRequests [N_FLOORS][N_BUTTONS]bool
 
@@ -34,15 +58,53 @@ func RunSlaveBrain(id string) {
 		case state := <-receiveElevatorState:
 			state.ID = id
 			sendElevatorState <- state
-		case /*order :=*/ <-receiveOrdersCh:
+
+		case order := <-receiveOrdersCh:
+			if order.Type == types.Cab {
+				slaveRequests[order.Floor][order.Type] = true //TODO: have to save this somewhere if the elevator dies and is revived
+				sendAssignmentsCh <- slaveRequests
+			} else if readyToSendOrder {
+				count += 1
+				readyToSendOrder = false
+				idtoInt, _ := strconv.Atoi(id)
+				ho := types.HallOrder{
+					Floor:     order.Floor,
+					Direction: int(order.Type),
+					Timestamp: time.Now(),
+					UpdateNr:  idtoInt*1000000 + count,
+				}
+				orderSender.SendAsyncWithAck(ho)
+			}
+
+		case ackResult := <-orderSender.AckResults:
+			if ackResult.Err != nil {
+				fmt.Printf("ORDER WAS NOT ACKED BY MASTER: %s\n", ackResult.Err)
+			}
+			readyToSendOrder = true
+
 			// TODO: Send order to master through network (Lars åssen bruker jeg network generic senderen din?)
 			// Need to agree on format
 			// Er også mulig å kjøre requests[order.Floor][order.Button] = true
 			// For så å sende?? Dette blir nok buggy siden heisen kanskje tar requesten med en gang i så fall.
 		case finishedOrders := <-receiveFinishedOrderCh:
-			for _, request := range finishedOrders {
-				slaveRequests[request.Floor][request.Button] = false
+			idtoInt, _ := strconv.Atoi(id)
+			count += 1
+			sendToMaster := types.FinishedHallAssignments{
+				UpdateNr:  idtoInt*1000000 + count,
+				Timestamp: time.Now(),
+				Orders:    make([]types.Order, len(finishedOrders)),
 			}
+
+			for i, request := range finishedOrders {
+				slaveRequests[request.Floor][request.Button] = false
+				sendToMaster.Orders[i] = types.Order{
+					Floor: request.Floor,
+					Type:  types.OrderType(request.Button),
+				}
+			}
+
+			completeAssignmentSender.SendAsyncWithAck(sendToMaster)
+
 			// TODO: enten sende hele requests eller bare sende endringen videre til master
 			// Hvem vet hva som er best
 		case assignments := <-receiveAssignmentsFromMasterCh:
@@ -50,11 +112,12 @@ func RunSlaveBrain(id string) {
 			// TODO: kombinere hallrequests og cabrequest før man sender
 			fmt.Println(assignments.Data)
 			// slaveRequests = assignments
-
-
-			for _, 
-
-			sendAssignmentsCh <- assignments.Data[id]
+			for i := range slaveRequests {
+				slaveRequests[i][0] = assignments.Data[id][i][0]
+				slaveRequests[i][1] = assignments.Data[id][i][1]
+			}
+			// TODO: turn on lights of other
+			sendAssignmentsCh <- slaveRequests
 		}
 	}
 

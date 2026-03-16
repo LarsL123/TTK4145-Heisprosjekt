@@ -1,6 +1,8 @@
 package types
 
-import "time"
+import (
+	"time"
+)
 
 type ElevatorState struct {
 	ID          string
@@ -13,14 +15,59 @@ type ElevatorState struct {
 }
 
 type HallOrder struct {
-	Floor     int
-	Direction string
+	UpdateNr  int
+	Floor     int //Refactor to order type
+	Direction int
 	Timestamp time.Time
 }
+
+type HallOrderAck struct {
+	UpdateNr int
+}
+
+func (s HallOrder) GetUpdateNr() int {
+	return s.UpdateNr
+}
+
+func (s HallOrderAck) GetUpdateNr() int {
+	return s.UpdateNr
+}
+
+type FinishedHallAssignments struct {
+	UpdateNr  int
+	Orders    []Order
+	Timestamp time.Time
+}
+
+type FinishedHallAssignmentsAck struct {
+	UpdateNr int
+}
+
+func (s FinishedHallAssignments) GetUpdateNr() int {
+	return s.UpdateNr
+}
+
+func (s FinishedHallAssignmentsAck) GetUpdateNr() int {
+	return s.UpdateNr
+}
+
 type Assignements struct {
 	Data map[string][4][2]bool
 }
 
-type cabOrder struct {
+type CabOrder struct {
 	Floor int
+}
+
+type OrderType int
+
+const (
+	HallUp   OrderType = 0
+	HallDown OrderType = 1
+	Cab      OrderType = 2
+)
+
+type Order struct {
+	Floor int
+	Type  OrderType
 }

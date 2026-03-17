@@ -13,6 +13,7 @@ import (
 func RunSlaveBrain(id string) {
 	var messageCount int = 0
 	var slaveRequests [N_FLOORS][N_BUTTONS]bool
+	var lightsOn [N_FLOORS][N_BUTTONS]bool
 
 	// Channels
 	receiveOrdersCh := make(chan types.Order)
@@ -35,7 +36,7 @@ func RunSlaveBrain(id string) {
 	receiveAssignmentsFromMasterCh := make(chan types.Assignments)
 
 	// Start ElevatorManager
-	go elevatormanager.ElevatorManager(receiveElevatorState, receiveOrdersCh, receiveFinishedAssignmentsCh, sendAssignmentsCh,sendLightsCh)
+	go elevatormanager.ElevatorManager(receiveElevatorState, receiveOrdersCh, receiveFinishedAssignmentsCh, sendAssignmentsCh, sendLightsCh)
 
 	// Broadcast transmitter & receiver
 	go bcast.Transmitter(config.Cfg.MasterListenPort, sendElevatorState, sendOrdersCh, sendFinishedAssignmentsCh)
@@ -86,6 +87,7 @@ func RunSlaveBrain(id string) {
 		case finishedOrders := <-receiveFinishedAssignmentsCh:
 			for _, request := range finishedOrders {
 				slaveRequests[request.Floor][request.Type] = false
+				lightsOn[request.Floor][request.Type] = false
 			}
 
 			messageCount++
@@ -114,7 +116,8 @@ func RunSlaveBrain(id string) {
 			sendAssignmentsCh <- slaveRequests
 
 			// Prepare lights on
-			sendLightsCh <- lightsFromAssignments(assignments.Data, slaveRequests)
+			lightsOn = lightsFromAssignments(assignments.Data, slaveRequests)
+			sendLightsCh <- lightsOn
 		}
 	}
 }
@@ -128,7 +131,7 @@ func removeTimeouts[T types.LivingMessage](pending map[int]T) {
 	}
 }
 
-func lightsFromAssignments(assignments map[string][N_FLOORS][2]bool,slaveRequests [N_FLOORS][N_BUTTONS]bool ) [N_FLOORS][N_BUTTONS]bool {
+func lightsFromAssignments(assignments map[string][N_FLOORS][2]bool, slaveRequests [N_FLOORS][N_BUTTONS]bool) [N_FLOORS][N_BUTTONS]bool {
 	var lightsOn [N_FLOORS][N_BUTTONS]bool
 	for _, assignment := range assignments {
 		for i := range N_FLOORS {

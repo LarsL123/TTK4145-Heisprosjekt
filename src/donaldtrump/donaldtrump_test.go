@@ -15,3 +15,4 @@ func TestJDVance(t *testing.T) {
 	config.Load()
 	RunSlaveBrain("2")
 }
+

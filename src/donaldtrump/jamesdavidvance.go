@@ -3,9 +3,7 @@ package donaldtrump
 import (
 	"Network-go/network/bcast"
 	"elevatorproject/src/config"
-	elevatormanager "elevatorproject/src/elevatorManager"
 	"elevatorproject/src/elevio"
-	"elevatorproject/src/network"
 	"elevatorproject/src/types"
 	"fmt"
 	"strconv"
@@ -25,11 +23,8 @@ func RunSlaveBrain(id string) {
 	sendElevatorState := make(chan types.ElevatorState)
 
 	// Send orders to masters
-	sendOrdersCh := make(chan types.HallOrder)
-	hallOrderAck := make(chan types.HallOrderAck)
-
-	// Initialize ACK listener
-	ackListener := network.NewAckListener(2 * time.Second)
+	sendOrdersCh := make(chan types.HallOrder, 10)
+	hallOrderAck := make(chan types.HallOrderAck, 10)
 
 	// Finished Assignments setup (commented out, kept for later)
 	sendFinishedAssignmentsCh := make(chan types.FinishedHallAssignments)
@@ -43,12 +38,18 @@ func RunSlaveBrain(id string) {
 	*/
 
 	// Start ElevatorManager
-	go elevatormanager.ElevatorManager(receiveElevatorState, receiveOrdersCh, receiveFinishedAssignmentsCh, sendAssignmentsCh)
+	// go elevatormanager.ElevatorManager(receiveElevatorState, receiveOrdersCh, receiveFinishedAssignmentsCh, sendAssignmentsCh)
 
 	// Broadcast transmitter & receiver
 	go bcast.Transmitter(config.Cfg.MasterListenPort, sendElevatorState, sendOrdersCh, sendFinishedAssignmentsCh)
 	receiveAssignmentsFromMasterCh := make(chan types.Assignements)
 	go bcast.Receiver(config.Cfg.SlaveListenPort, receiveAssignmentsFromMasterCh, hallOrderAck, finishedOrdersAckCh)
+
+
+	//RESENDING LOGIC:
+	pending := make(map[int]types.HallOrder) // key = UpdateNr
+	resendTicker := time.NewTicker(200 * time.Millisecond)
+	timeout := 5 * time.Second
 
 	for {
 		select {
@@ -74,24 +75,26 @@ func RunSlaveBrain(id string) {
 
 				fmt.Println("Sending new order")
 
-				// Send asynchronously
+				// Send
 				sendOrdersCh <- ho
+				pending[ho.UpdateNr] = ho
+			}
 
-				// Track ACK asynchronously
-				go func(updateNr int) {
-					res := ackListener.WaitAck(updateNr)
-					if res.Err != nil {
-						fmt.Printf("ORDER WAS NOT ACKED BY MASTER: %s\n", res.Err)
-					} else {
-						fmt.Printf("ACK received for order %d\n", updateNr)
-					}
-				}(ho.UpdateNr)
+		case <-resendTicker.C:
+			for updateNr, ho := range pending {
+				if time.Since(ho.Timestamp) > timeout {
+					fmt.Println("Dropping order:", updateNr)
+					delete(pending, updateNr)
+					continue
+				}
+				fmt.Println("Resending Order: ", updateNr)
+				sendOrdersCh <- ho
 			}
 
 		case ack := <-hallOrderAck:
-			// Push ACK to listener
-			ackListener.PushAck(ack.UpdateNr)
-
+			fmt.Println("Recived ACK for order", ack.UpdateNr)
+			delete(pending, ack.UpdateNr)
+		
 		case /*finishedOrders :=*/ <-receiveFinishedAssignmentsCh:
 			// fmt.Println("DEN GÅR GJENNOM FSM!!")
 			/*

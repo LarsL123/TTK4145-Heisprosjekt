@@ -66,23 +66,25 @@ func RunMasterBrain(id string) {
 	//Sending channel
 	sendAssignemnetsCh := make(chan types.Assignements)
 	ackAssignementCompleted := make(chan types.FinishedHallAssignmentsAck)
-	sendOrderAckCh := make(chan types.HallOrderAck)
+	sendOrderAckCh := make(chan types.HallOrderAck, 10)
 	go bcast.Transmitter(config.Cfg.SlaveListenPort, sendAssignemnetsCh, sendOrderAckCh, ackAssignementCompleted)
 
-	assignmentTicker := time.NewTicker(1 * time.Second)
-	defer assignmentTicker.Stop()
+	resetTimer := time.NewTicker(50 * time.Second)
+	defer resetTimer.Stop()
 
 	for {
 		select {
 
-		case <-assignmentTicker.C:
-			ordersCh <- ordermanager.ToHRAInput(masterData.hallRequests, masterData.states) //Loopes back to case
+		case <-resetTimer.C:
+			masterData.hallRequests = [4][2]bool{{false, false}, {false, false}, {false, false}, {false, false}}
+			fmt.Println("Resetting hall orders!", masterData)
 
 		case orderReceived := <-receiveElevatorOrdersCh:
-			fmt.Println("Reciving order")
+			fmt.Println("Reciving order ack back")
 			sendOrderAckCh <- types.HallOrderAck{UpdateNr: orderReceived.GetUpdateNr()}
 
 			masterData.hallRequests[orderReceived.Floor][orderReceived.Direction] = true
+			ordersCh <- ordermanager.ToHRAInput(masterData.hallRequests, masterData.states) //Loopes back to case
 
 		case /*completedAssignments :=*/ <-reciveAssignmentComplete:
 			// for _, order := range completedAssignments.Orders {
@@ -99,7 +101,7 @@ func RunMasterBrain(id string) {
 
 		case assignment := <-calculatedAssignementsCh:
 			fmt.Println(assignment)
-			fmt.Println("Sending back")
+			fmt.Println("Sending back assignment")
 			sendAssignemnetsCh <- types.Assignements{Data: assignment}
 
 		case elevatorData := <-updateStreamCh:

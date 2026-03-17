@@ -333,14 +333,11 @@ func (al *AckListener) WaitAck(updateNr int) AckResult {
 	}
 }
 
-// HandleAck should be called when a network ACK arrives
-func (al *AckListener) HandleAck(updateNr int) {
+// helper to remove pending on timeout
+func (al *AckListener) removePending(updateNr int) {
 	al.mutex.Lock()
 	defer al.mutex.Unlock()
-	if ch, ok := al.pending[updateNr]; ok {
-		ch <- AckResult{UpdateNr: updateNr, Err: nil}
-		delete(al.pending, updateNr)
-	}
+	delete(al.pending, updateNr)
 }
 
 // internal loop to process incoming ACKs
@@ -350,11 +347,14 @@ func (al *AckListener) run() {
 	}
 }
 
-// helper to remove pending on timeout
-func (al *AckListener) removePending(updateNr int) {
+// HandleAck should be called when a network ACK arrives
+func (al *AckListener) HandleAck(updateNr int) {
 	al.mutex.Lock()
 	defer al.mutex.Unlock()
-	delete(al.pending, updateNr)
+	if ch, ok := al.pending[updateNr]; ok {
+		ch <- AckResult{UpdateNr: updateNr, Err: nil}
+		delete(al.pending, updateNr)
+	}
 }
 
 // External function to push ACK from network

@@ -72,6 +72,8 @@ func RunSlaveBrain(id string) {
 					UpdateNr:  idInt*1000000 + messageCount,
 				}
 
+				fmt.Println("Sending new order")
+
 				// Send asynchronously
 				sendOrdersCh <- ho
 

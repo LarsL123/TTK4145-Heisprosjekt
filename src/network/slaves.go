@@ -60,7 +60,7 @@ func ReplyToHeartbeat(id string) {
 		// 	masterip = beat.IP
 		// }
 
-		reply := Heartbeat{id, Slave, ""}
+		reply := Heartbeat{id, Slave}
 		send <- reply
 	}
 }

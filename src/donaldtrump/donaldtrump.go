@@ -27,17 +27,18 @@ type masterData struct {
 	timeSinceUpdate map[string]time.Time
 }
 
-func RunMasterBrain(id string) {
+func RunMasterBrain(id string, isMasterCh chan bool) {
 	masterData := masterData{
 		hallRequests:    [N_FLOORS][2]bool{{false, false}, {false, false}, {false, false}, {false, false}},
 		states:          make(map[string]types.ElevatorState),
 		cabRequests:     make(map[string][N_FLOORS]bool),
 		timeSinceUpdate: make(map[string]time.Time), //TODO - Trenger vi denne?
 	}
+	var isMaster = false
 
 	//Order calculation
 	ordersCh := make(chan ordermanager.HRAInput)
-	calculatedAssignementsCh := make(chan map[string][N_FLOORS][2]bool)
+	calculatedAssignementsCh := make(chan map[string][N_FLOORS][2]bool, 10)
 	go ordermanager.ManageOrders(ordersCh, calculatedAssignementsCh)
 
 	//reciving channel
@@ -53,7 +54,20 @@ func RunMasterBrain(id string) {
 	go bcast.Transmitter(config.Cfg.SlaveListenPort, sendAssignemnetsCh, sendOrderAckCh, ackAssignementCompleted)
 
 	for {
+		if !isMaster { //Bro sverre ikke se her
+			select {
+			case isMaster = <-isMasterCh:
+			case <-receiveElevatorOrdersCh:
+			case <-reciveAssignmentComplete:
+			case <-calculatedAssignementsCh:
+			case <-updateStreamCh:
+			default:
+			}
+			continue
+		}
+
 		select {
+		case isMaster = <-isMasterCh:
 
 		case orderReceived := <-receiveElevatorOrdersCh:
 			fmt.Println("Reciving order, sending ack")
@@ -110,5 +124,6 @@ func RunMasterBrain(id string) {
 			}
 			fmt.Println("Recived data from: ", elevatorData.ID)
 		}
+
 	}
 }

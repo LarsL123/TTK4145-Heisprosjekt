@@ -1,7 +1,6 @@
 package reelection
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -10,96 +9,96 @@ import (
 	"elevatorproject/src/network"
 )
 
+// func InitReelection2(selfID string) {
 
-func InitReelection2(selfID string) {
-    heartbeatCh := make(chan network.Heartbeat, 32)
+// 	go ReelectionFSM(selfID)
+// }
 
-    go bcast.Receiver(config.Cfg.HeartbeatPort, heartbeatCh)
+func ReelectionFSM(selfID string, isMasterCh chan bool) {
 
-    go ReelectionFSM(selfID, heartbeatCh)
-}
+	role := network.Slave
 
-func ReelectionFSM(selfID string, heartbeatCh chan network.Heartbeat) {
+	masterTicker := time.NewTicker(2 * time.Second)
+	backupTicker := time.NewTicker(2 * time.Second)
 
-    role := network.Slave
+	// Setting up heartbeat
+	heartbeatTicker := time.NewTicker(config.Cfg.HeartbeatInterval)
+	sendHeartbeatCh := make(chan network.Heartbeat)
+	go bcast.Transmitter(config.Cfg.HeartbeatPort, sendHeartbeatCh)
+	heartbeatCh := make(chan network.Heartbeat, 32)
+	go bcast.Receiver(config.Cfg.HeartbeatPort, heartbeatCh)
 
-    masterTimer := time.NewTimer(2 * time.Second)
-    backupTimer := time.NewTimer(2 * time.Second)
+	heartbeat := network.Heartbeat{ID: selfID, Role: role}
 
-    var cancel context.CancelFunc
-    var ctx context.Context
+	startRole := func(r network.Role) {
+		isMasterCh <- false //Er dette feil sjef??
 
-    startRole := func(r network.Role) {
-        if cancel != nil {
-            cancel()
-        }
+		role = r
 
-        ctx, cancel = context.WithCancel(context.Background())
-        role = r
+		switch r {
+		case network.Master:
+			fmt.Println("I am master:", selfID)
+			isMasterCh <- true
 
-        switch r {
-        case network.Master:
-            fmt.Println("I am master:", selfID)
-            go network.StartMaster(selfID, ctx)
+		case network.Backup:
+			fmt.Println("I am backup:", selfID)
 
-        case network.Backup:
-            fmt.Println("I am backup:", selfID)
-            go network.StartBackup(selfID, ctx)
+		case network.Slave:
+			fmt.Println("I am slave:", selfID)
+		}
+	}
 
-        case network.Slave:
-            fmt.Println("I am slave:", selfID)
-        }
-    }
+	startRole(network.Slave)
 
-    startRole(network.Slave)
+	for {
+		select {
 
-    for {
-        select {
+		case hb := <-heartbeatCh:
 
-        case hb := <-heartbeatCh:
-
-            if hb.ID == selfID {
-                continue
-            }
-
-            switch hb.Role {
-				case network.Master:
-					masterTimer.Reset(2 * time.Second)
-
-					if role == network.Master {
-						if hb.ID > selfID {
-							fmt.Println("Higher ID master detected → stepping down")
-							startRole(network.Slave)
-						}
-					}
-
-				case network.Backup:
-					backupTimer.Reset(2 * time.Second)
-					
-					if role == network.Backup {			
-						if hb.ID > selfID {
-							fmt.Println("Higher ID backup detected → stepping down")
-							startRole(network.Slave)
-						}
-					}
-
+			if hb.ID == selfID {
+				continue
 			}
 
-        case <-masterTimer.C:
-            if role == network.Backup {
-                fmt.Println("Master dead → becoming master")
-                startRole(network.Master)
-            }
+			switch hb.Role {
+			case network.Master:
+				masterTicker.Reset(2 * time.Second)
 
-            masterTimer.Reset(2 * time.Second)
+				if role == network.Master {
+					if hb.ID > selfID {
+						fmt.Println("Higher ID master detected → stepping down")
+						startRole(network.Slave)
+					}
+				}
 
-        case <-backupTimer.C:
-            if role == network.Slave {
-                fmt.Println("No backup → becoming backup")
-                startRole(network.Backup)
-            }
+			case network.Backup:
+				backupTicker.Reset(2 * time.Second)
 
-            backupTimer.Reset(2 * time.Second)
-        }
-    }
+				if role == network.Backup {
+					if hb.ID > selfID {
+						fmt.Println("Higher ID backup detected → stepping down")
+						startRole(network.Slave)
+					}
+				}
+			}
+
+		case <-masterTicker.C:
+			if role == network.Backup {
+				fmt.Println("Master dead → becoming master")
+				startRole(network.Master)
+			}
+
+		case <-backupTicker.C:
+			if role == network.Slave {
+				fmt.Println("No backup → becoming backup")
+				startRole(network.Backup)
+			}
+
+		case <-heartbeatTicker.C:
+			if role != network.Slave {
+				heartbeat.Role = role
+				sendHeartbeatCh <- heartbeat
+			}
+
+		}
+	}
 }

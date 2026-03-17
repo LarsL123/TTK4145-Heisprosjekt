@@ -16,27 +16,11 @@ cleanup() {
 
 trap cleanup EXIT INT TERM
 
-# # Start elevators in separate terminals
-for port in $PORTS; do
-    gnome-terminal -- bash -c "echo 'Heis-$port'; ./SimElevatorServer --port=$port; exec bash" &
-done
-
-# sleep 0.2
-
-# # Start driver
-# #TODO: Fiks her når vi skal kjøre vår kode ikke test driver. 
-# for port in $PORTS; do
-#     gnome-terminal -- bash -c "cd ../driver-go; go run main.go; exec bash" &
-# done
 
 gnome-terminal -- bash -c "cd ../src/reelection; go test -run TestNy2; exec bash" &
 gnome-terminal -- bash -c "cd ../src/reelection; go test -run TestNy3; exec bash" &
 gnome-terminal -- bash -c "cd ../src/reelection; go test -run TestNy4; exec bash" &
-gnome-terminal -- bash -c "cd ../src/reelection; go test -run TestNy5; exec bash" &
-gnome-terminal -- bash -c "cd ../src/reelection; go test -run TestNy6; exec bash" &
-gnome-terminal -- bash -c "cd ../src/reelection; go test -run TestNy7; exec bash" &
-gnome-terminal -- bash -c "cd ../src/reelection; go test -run TestNy8; exec bash" &
-gnome-terminal -- bash -c "cd ../src/reelection; go test -run TestNy9; exec bash" &
+
 # gnome-terminal -- bash -c "cd ../src/donaldtrump; go test -run TestDonaldTrump; exec bash" &
 # gnome-terminal -- bash -c "cd ../src/donaldtrump; go test -run TestJDVance; exec bash" &
 

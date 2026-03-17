@@ -2,7 +2,7 @@ package network
 
 import (
 	"Network-go/network/bcast"
-	"Network-go/network/localip"
+	//"Network-go/network/localip"
 	"context"
 	"elevatorproject/src/config"
 	"fmt"
@@ -20,80 +20,77 @@ const (
 
 type SlaveUpdate struct {
 	Slaves []string
-	New   string
-	Lost  []string
+	New    string
+	Lost   []string
 }
 
-type Heartbeat struct{
-	ID string
-	Role Role //Slave/Master//TODO Make enum.  ---> Brage satt opp enum for Role. Sjekk om det gir mening.
-	IP string //Not in use. Hope we dont need it. 
+type Heartbeat struct {
+	ID   string
+	Role Role   //Slave/Master//TODO Make enum.  ---> Brage satt opp enum for Role. Sjekk om det gir mening.
+	//IP   string //Not in use. Hope we dont need it.
 }
 
-func StartMaster(id string, ctx context.Context) {//chan SlaveUpdate{
-		go SendHeartbeats(id,Master, ctx)
+func StartMaster(id string, ctx context.Context) { //chan SlaveUpdate{
+	go SendHeartbeats(id, Master, ctx)
 
-		// heartBeatCh := make(chan Heartbeat)
-		// go bcast.Receiver(config.Cfg.HeartbeatReplyPort, heartBeatCh)
+	// heartBeatCh := make(chan Heartbeat)
+	// go bcast.Receiver(config.Cfg.HeartbeatReplyPort, heartBeatCh)
 
-		// slaveUpdate := make(chan SlaveUpdate)
-		// go TrackSlaves(heartBeatCh, slaveUpdate, ctx)
+	// slaveUpdate := make(chan SlaveUpdate)
+	// go TrackSlaves(heartBeatCh, slaveUpdate, ctx)
 
-		// return slaveUpdate
+	// return slaveUpdate
 }
 
-func StartBackup(id string, ctx context.Context){
-		go SendHeartbeats(id, Backup, ctx)
+func StartBackup(id string, ctx context.Context) {
+	go SendHeartbeats(id, Backup, ctx)
 }
-
 
 func SendHeartbeats(id string, role Role, ctx context.Context) {
 	//Burde isMaster vekk?
 	sendCh := make(chan Heartbeat)
 	go bcast.Transmitter(config.Cfg.HeartbeatPort, sendCh)
 
-	ip, err := localip.LocalIP()
+	//ip, err := localip.LocalIP()
 
-	if err != nil{
-		fmt.Println("Failed to get IP. What do we do?")
-	}
+	// if err != nil {
+	// 	fmt.Println("Failed to get IP. What do we do?")
+	// }
 
-
-	heartbeat := Heartbeat{id, role, ip}
+	heartbeat := Heartbeat{id, role}
 
 	for {
 		select {
-			case <- ctx.Done():
-				fmt.Println("Not sending heartbeats anymore: ", id, role)
-				return
-			case <-time.After(config.Cfg.HeartbeatInterval):
-				sendCh <- heartbeat
+		case <-ctx.Done():
+			fmt.Println("Not sending heartbeats anymore: ", id, role)
+			return //TOODO: This is broken -> bcast.Transmitter er ikke cleana opp
+		case <-time.After(config.Cfg.HeartbeatInterval):
+			sendCh <- heartbeat
 		}
 	}
 }
 
-func TrackSlaves(heartBeatCh <-chan Heartbeat, slaveUpdateCh chan<- SlaveUpdate, ctx context.Context ){
+func TrackSlaves(heartBeatCh <-chan Heartbeat, slaveUpdateCh chan<- SlaveUpdate, ctx context.Context) {
 	lastSeen := make(map[string]time.Time)
 
 	for {
 		slaveID := ""
-		
+
 		select {
-			case <- ctx.Done():
-				return
+		case <-ctx.Done():
+			return
 
-			case acc := <- heartBeatCh:
-				if acc.ID == "" {
-					fmt.Println("Got invalid packet")
-					continue
-				}
+		case acc := <-heartBeatCh:
+			if acc.ID == "" {
+				fmt.Println("Got invalid packet")
+				continue
+			}
 
-				slaveID = acc.ID
+			slaveID = acc.ID
 
-			case <-time.After(config.Cfg.HeartbeatInterval):
+		case <-time.After(config.Cfg.HeartbeatInterval):
 		}
 
-	
 		p := SlaveUpdate{}
 		updated := false
 
@@ -135,5 +132,3 @@ func TrackSlaves(heartBeatCh <-chan Heartbeat, slaveUpdateCh chan<- SlaveUpdate,
 		}
 	}
 }
-
-

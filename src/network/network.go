@@ -2,37 +2,47 @@ package network
 
 import (
 	"elevatorproject/src/config"
+	"elevatorproject/src/types"
 	"fmt"
 	"sync"
 	"time"
-    "elevatorproject/src/types"
 )
-
 
 func SendOrdersWithAck(receiveOrdersFromSlaveCh chan types.HallOrder, sendOrdersToMasterCh chan types.HallOrder, receiveAckOrderCh chan types.HallOrderAck) {
 	var unackedOrders = make(map[int]types.HallOrder)
+	var timeoutMap = make(map[int]time.Time)
 	resendTicker := time.NewTicker(config.Cfg.AckRetryRate)
 	defer resendTicker.Stop()
-
 	for {
 		select {
 		case order := <-receiveOrdersFromSlaveCh:
 			unackedOrders[order.UpdateNr] = order
+			timeoutMap[order.UpdateNr] = time.Now()
+			select {
+			case sendOrdersToMasterCh <- order:
+			default:
+			}
 
-            sendOrdersToMasterCh <- order
-            
 		case <-resendTicker.C:
 			for _, order := range unackedOrders {
-				if !order.Acked {
-					sendOrdersToMasterCh <- order.Order
+				select {
+				case sendOrdersToMasterCh <- order:
+				default:
+				}
+
+				// Checking if order has timed out
+				if (time.Since(timeoutMap[order.GetUpdateNr()]) > 2*time.Second){
+					delete(unackedOrders, order.UpdateNr)
+					delete(timeoutMap,order.UpdateNr)
+					fmt.Printf("Order %d was not acked by master" )
 				}
 			}
-		case AckedOrder := <- receiveAckOrderCh:
-			if unackedOrders[AckedOrder.UpdateNr] == nil{
-				break
+		case AckedOrder := <-receiveAckOrderCh:
+			if _, exists := unackedOrders[AckedOrder.UpdateNr]; exists {
+				delete(unackedOrders, AckedOrder.UpdateNr)
+				delete(timeoutMap,AckedOrder.UpdateNr)
+				fmt.Printf("Order %d acked and removed from resend queue\n", AckedOrder.UpdateNr)
 			}
-            unackedOrders[AckedOrder.UpdateNr].Acked = true
-            fmt.Printf("Order %d acked\n", AckedOrder.UpdateNr)
 		}
 	}
 }

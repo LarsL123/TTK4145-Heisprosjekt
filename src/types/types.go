@@ -47,7 +47,7 @@ func (r FinishedHallAssignments) GetCreationTime() time.Time {
 	return r.CreatedAt
 }
 
-type Assignements struct {
+type Assignments struct {
 	Data map[string][4][2]bool
 }
 

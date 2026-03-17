@@ -18,7 +18,7 @@ const address = "0.0.0.0:15657"
 const N_BUTTONS = 3
 const DOOR_OPEN_DURATION = 3 // [seconds]
 
-func ElevatorManager(elevStateCh chan<- types.ElevatorState, sendOrderCh chan types.Order, sendFinishedOrderch chan []types.Order, receiveAssignmentsCh chan [N_FLOORS][N_BUTTONS]bool) {
+func ElevatorManager(elevStateCh chan<- types.ElevatorState, sendOrderCh chan types.Order, sendFinishedOrderch chan []types.Order, receiveAssignmentsCh chan [N_FLOORS][N_BUTTONS]bool, receiveLIghtsCh chan [N_FLOORS][N_BUTTONS]bool) {
 	// Spørsmål til studass: er det greit å heller definere elevator på package level, slipper dermed å passe elevator pointer til alle funksjonene som skal endre på den??
 
 	elevio.Init(address, N_FLOORS)
@@ -71,7 +71,8 @@ func ElevatorManager(elevStateCh chan<- types.ElevatorState, sendOrderCh chan ty
 				CreatedAt:   time.Now(),
 				Obstructed:  elevator.obstructed,
 			}
+		case newLights := <- receiveLIghtsCh:
+			fsm_onNewLights(newLights)
 		}
-
 	}
 }

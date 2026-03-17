@@ -45,7 +45,7 @@ func RunMasterBrain(id string) {
 	go bcast.Receiver(config.Cfg.MasterListenPort, updateStreamCh, receiveElevatorOrdersCh, reciveAssignmentComplete)
 
 	//Sending channel
-	sendAssignemnetsCh := make(chan types.Assignements)
+	sendAssignemnetsCh := make(chan types.Assignments)
 	ackAssignementCompleted := make(chan types.FinishedHallAssignmentsAck)
 	sendOrderAckCh := make(chan types.HallOrderAck, 10)
 	go bcast.Transmitter(config.Cfg.SlaveListenPort, sendAssignemnetsCh, sendOrderAckCh, ackAssignementCompleted)
@@ -75,7 +75,7 @@ func RunMasterBrain(id string) {
 
 		case assignment := <-calculatedAssignementsCh:
 			fmt.Println("Sending back assignment: ")
-			sendAssignemnetsCh <- types.Assignements{Data: assignment}
+			sendAssignemnetsCh <- types.Assignments{Data: assignment}
 
 		case elevatorData := <-updateStreamCh:
 			masterData.states[elevatorData.ID] = elevatorData

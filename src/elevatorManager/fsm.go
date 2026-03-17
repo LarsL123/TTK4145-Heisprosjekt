@@ -12,7 +12,6 @@ var elevator = Elevator{floor: -1,
 	doorOpenDuration: 3.0,
 	dirn:             elevio.MD_Down,
 	obstructed:       false,
-
 	}
 
 func fsm_sendElevatorState(sendCh chan<- Elevator){
@@ -32,7 +31,7 @@ func fsm_getCabRequests() [4]bool {
 func fsm_setAllLights() {
 	for floor := 0; floor < N_FLOORS; floor++ {
 		for btn := 0; btn < N_BUTTONS; btn++ {
-			elevio.SetButtonLamp(elevio.ButtonType(btn), floor, elevator.requests[floor][btn])
+			elevio.SetButtonLamp(elevio.ButtonType(btn), floor, elevator.lights_on[floor][btn])
 		}
 	}
 }
@@ -147,4 +146,8 @@ func fsm_onNewButtonRequest(buttonRequest elevio.ButtonEvent, sendOrderCh chan<-
 
 		sendOrderCh <- order
 	}
+}
+
+func fsm_onNewLights(lights [N_FLOORS][N_BUTTONS]bool){
+	elevator.lights_on = lights
 }

@@ -61,7 +61,7 @@ func TestSingleElevator(t *testing.T) {
 	sendAssignmentsCh := make(chan [N_FLOORS][N_BUTTONS]bool)
 	receiveElevatorState := make(chan types.ElevatorState)
 
-	go ElevatorManager(receiveElevatorState, receiveOrdersCh, receiveFinishedOrderCh, sendAssignmentsCh)
+	go ElevatorManager(receiveElevatorState, receiveOrdersCh, receiveFinishedOrderCh, sendAssignmentsCh,sendLightsCh)
 
 	var requests [N_FLOORS][N_BUTTONS]bool
 

@@ -89,6 +89,7 @@ func RunSlaveBrain(id string) {
 				slaveRequests[request.Floor][request.Type] = false
 				lightsOn[request.Floor][request.Type] = false
 			}
+			sendLightsCh <- lightsOn
 
 			messageCount++
 			finishedAssigment := createFinishedAssignments(id, finishedOrders, messageCount)

@@ -4,7 +4,6 @@ import (
 	"Network-go/network/bcast"
 	"elevatorproject/src/config"
 	elevatormanager "elevatorproject/src/elevatorManager"
-	"elevatorproject/src/elevio"
 	"elevatorproject/src/types"
 	"fmt"
 	"strconv"
@@ -17,7 +16,7 @@ func RunSlaveBrain(id string) {
 
 	// Channels
 	receiveOrdersCh := make(chan types.Order)
-	receiveFinishedAssignmentsCh := make(chan []elevio.ButtonEvent)
+	receiveFinishedAssignmentsCh := make(chan []types.Order)
 	receiveElevatorState := make(chan types.ElevatorState)
 
 	sendAssignmentsCh := make(chan [N_FLOORS][N_BUTTONS]bool)
@@ -112,10 +111,10 @@ func RunSlaveBrain(id string) {
 			}
 
 			for i, request := range finishedOrders {
-				slaveRequests[request.Floor][request.Button] = false
+				slaveRequests[request.Floor][request.Type] = false
 				sendToMaster.Orders[i] = types.Order{
 					Floor: request.Floor,
-					Type:  types.OrderType(request.Button),
+					Type:  types.OrderType(request.Type),
 				}
 			}
 

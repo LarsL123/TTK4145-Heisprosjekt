@@ -36,8 +36,8 @@ var defaultValues = Config{
 	SlaveListenPort:  15649,
 	MasterListenPort: 15650,
 
-	AckRetryRate: 50 * time.Millisecond,
-	AckTimeout:   3 * time.Second,
+	AckRetryRate: 200 * time.Millisecond,
+	AckTimeout:   4 * time.Second,
 
 	ElevatorUpdateRate: 2 * time.Second,
 }

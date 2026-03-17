@@ -41,8 +41,8 @@ func RunSlaveBrain(id string) {
 	go bcast.Receiver(config.Cfg.SlaveListenPort, receiveAssignmentsFromMasterCh, hallOrderAck, finishedAssignmentsAckCh)
 
 	//RESENDING LOGIC:
-	pendingOrders := make(map[int]types.HallOrder)                            // key = UpdateNr
-	pendingFinishedAssignments := make(map[int]types.FinishedHallAssignments) // key = UpdateNr
+	pendingOrders := make(map[int]types.HallOrder)
+	pendingFinishedAssignments := make(map[int]types.FinishedHallAssignments)
 	resendTicker := time.NewTicker(200 * time.Millisecond)
 	timeout := 5 * time.Second
 
@@ -54,25 +54,16 @@ func RunSlaveBrain(id string) {
 			sendElevatorState <- state
 
 		case order := <-receiveOrdersCh:
-			if order.Type == types.Cab {
-				slaveRequests[order.Floor][order.Type] = true // TODO: persist if elevator dies
-				sendAssignmentsCh <- slaveRequests
-			} else {
-				// Prepare hall order
+			if order.Type != types.Cab {
 				messageCount++
-				idInt, _ := strconv.Atoi(id)
-				ho := types.HallOrder{
-					Floor:     order.Floor,
-					Direction: int(order.Type),
-					CreatedAt: time.Now(),
-					UpdateNr:  idInt*1000000 + messageCount,
-				}
+				ho := createHallOrder(id, order, messageCount)
 
-				fmt.Println("Sending new order")
-
-				// Send
 				sendOrdersCh <- ho
 				pendingOrders[ho.UpdateNr] = ho
+
+			} else {
+				slaveRequests[order.Floor][order.Type] = true // TODO: persist if elevator dies
+				sendAssignmentsCh <- slaveRequests
 			}
 
 		case <-resendTicker.C:
@@ -102,27 +93,18 @@ func RunSlaveBrain(id string) {
 
 		case finishedOrders := <-receiveFinishedAssignmentsCh:
 
-			idInt, _ := strconv.Atoi(id)
-			messageCount++
-			sendToMaster := types.FinishedHallAssignments{
-				UpdateNr:  idInt*1000000 + messageCount,
-				CreatedAt: time.Now(),
-				Orders:    make([]types.Order, len(finishedOrders)),
+			for _, request := range finishedOrders {
+				slaveRequests[request.Floor][request.Type] = false
 			}
 
-			for i, request := range finishedOrders {
-				slaveRequests[request.Floor][request.Type] = false
-				sendToMaster.Orders[i] = types.Order{
-					Floor: request.Floor,
-					Type:  types.OrderType(request.Type),
-				}
-			}
+			messageCount++
+			finishedAssigment := createFinishedAssignments(id, finishedOrders, messageCount)
 
 			fmt.Println("Clearing assignment")
 
 			// Send
-			sendFinishedAssignmentsCh <- sendToMaster
-			pendingFinishedAssignments[sendToMaster.UpdateNr] = sendToMaster
+			sendFinishedAssignmentsCh <- finishedAssigment
+			pendingFinishedAssignments[finishedAssigment.UpdateNr] = finishedAssigment
 
 			//TODO: choose whether to send full requests or only changes
 
@@ -144,6 +126,35 @@ func RunSlaveBrain(id string) {
 
 		}
 	}
+}
+
+func createHallOrder(id string, order types.Order, messageCount int) types.HallOrder {
+	idInt, _ := strconv.Atoi(id)
+
+	return types.HallOrder{
+		Floor:     order.Floor,
+		Direction: int(order.Type),
+		CreatedAt: time.Now(),
+		UpdateNr:  idInt*1000000 + messageCount,
+	}
+}
+
+func createFinishedAssignments(id string, orders []types.Order, messageCount int) types.FinishedHallAssignments {
+	idInt, _ := strconv.Atoi(id)
+	sendToMaster := types.FinishedHallAssignments{
+		UpdateNr:  idInt*1000000 + messageCount,
+		CreatedAt: time.Now(),
+		Orders:    make([]types.Order, len(orders)),
+	}
+
+	for i, request := range orders {
+		sendToMaster.Orders[i] = types.Order{
+			Floor: request.Floor,
+			Type:  types.OrderType(request.Type),
+		}
+	}
+
+	return sendToMaster
 }
 
 // func RunSlaveBrain(id string) {

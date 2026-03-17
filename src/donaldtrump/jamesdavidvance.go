@@ -29,7 +29,7 @@ func RunSlaveBrain(id string) {
 
 	// Finished Assignments setup (commented out, kept for later)
 	sendFinishedAssignmentsCh := make(chan types.FinishedHallAssignments)
-	finishedOrdersAckCh := make(chan types.FinishedHallAssignmentsAck)
+	finishedAssignmentsAckCh := make(chan types.FinishedHallAssignmentsAck)
 	/*
 		completeAssignmentSender := &network.GenericSender[types.FinishedHallAssignments, types.FinishedHallAssignmentsAck]{
 			SendCh:     sendFinishedAssignmentsCh,
@@ -44,12 +44,14 @@ func RunSlaveBrain(id string) {
 	// Broadcast transmitter & receiver
 	go bcast.Transmitter(config.Cfg.MasterListenPort, sendElevatorState, sendOrdersCh, sendFinishedAssignmentsCh)
 	receiveAssignmentsFromMasterCh := make(chan types.Assignements)
-	go bcast.Receiver(config.Cfg.SlaveListenPort, receiveAssignmentsFromMasterCh, hallOrderAck, finishedOrdersAckCh)
+	go bcast.Receiver(config.Cfg.SlaveListenPort, receiveAssignmentsFromMasterCh, hallOrderAck, finishedAssignmentsAckCh)
 
 	//RESENDING LOGIC:
 	pending := make(map[int]types.HallOrder) // key = UpdateNr
 	resendTicker := time.NewTicker(200 * time.Millisecond)
 	timeout := 5 * time.Second
+
+	pending2 := make(map[int]types.FinishedHallAssignments) // key = UpdateNr
 
 	for {
 		select {
@@ -91,37 +93,53 @@ func RunSlaveBrain(id string) {
 				sendOrdersCh <- ho
 			}
 
+			for updateNr, ho := range pending2 {
+				if time.Since(ho.Timestamp) > timeout {
+					fmt.Println("Dropping assignemnt:", updateNr)
+					delete(pending2, updateNr)
+					continue
+				}
+				fmt.Println("Resending Order: ", updateNr)
+				sendFinishedAssignmentsCh <- ho
+			}
+
 		case ack := <-hallOrderAck:
 			fmt.Println("Recived ACK for order", ack.UpdateNr)
 			delete(pending, ack.UpdateNr)
 
-		case /*finishedOrders :=*/ <-receiveFinishedAssignmentsCh:
-			// fmt.Println("DEN GÅR GJENNOM FSM!!")
-			/*
-				idInt, _ := strconv.Atoi(id)
-				messageCount++
-				sendToMaster := types.FinishedHallAssignments{
-					UpdateNr:  idInt*1000000 + messageCount,
-					Timestamp: time.Now(),
-					Orders:    make([]types.Order, len(finishedOrders)),
-				}
+		case finishedOrders := <-receiveFinishedAssignmentsCh:
 
-				for i, request := range finishedOrders {
-					slaveRequests[request.Floor][request.Button] = false
-					sendToMaster.Orders[i] = types.Order{
-						Floor: request.Floor,
-						Type:  types.OrderType(request.Button),
-					}
-				}
+			idInt, _ := strconv.Atoi(id)
+			messageCount++
+			sendToMaster := types.FinishedHallAssignments{
+				UpdateNr:  idInt*1000000 + messageCount,
+				Timestamp: time.Now(),
+				Orders:    make([]types.Order, len(finishedOrders)),
+			}
 
-				completeAssignmentSender.SendAsyncWithAck(sendToMaster)
-				// TODO: choose whether to send full requests or only changes
-			*/
+			for i, request := range finishedOrders {
+				slaveRequests[request.Floor][request.Button] = false
+				sendToMaster.Orders[i] = types.Order{
+					Floor: request.Floor,
+					Type:  types.OrderType(request.Button),
+				}
+			}
+
+			fmt.Println("Clearing assignment")
+
+			// Send
+			sendFinishedAssignmentsCh <- sendToMaster
+			pending2[sendToMaster.UpdateNr] = sendToMaster
+
+			//				TODO: choose whether to send full requests or only changes
+
+		case ack := <-finishedAssignmentsAckCh:
+			fmt.Println("Recived ACK for assignemnt", ack.UpdateNr)
+			delete(pending2, ack.UpdateNr)
 
 		case assignments := <-receiveAssignmentsFromMasterCh:
-			// fmt.Println("Received assignments. Doing the work")
+			fmt.Println("Received assignments. Doing the work")
 
-			fmt.Println(assignments.Data)
 			// Combine hall requests and cab requests before sending
 			for i := range slaveRequests {
 				slaveRequests[i][0] = assignments.Data[id][i][0]

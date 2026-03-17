@@ -147,7 +147,7 @@ func fsm_onNewButtonRequest(buttonRequest elevio.ButtonEvent, sendOrderCh chan<-
 	}
 }
 
-func fsm_onNewLights(lights [N_FLOORS][N_BUTTONS]bool) {
-	elevator.lights_on = lights
+func fsm_onNewLights(lights [N_FLOORS][2]bool) {
+	for light := range lights
 	fsm_setAllLights()
 }

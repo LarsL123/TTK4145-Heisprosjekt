@@ -132,7 +132,7 @@ func removeTimeouts[T types.LivingMessage](pending map[int]T) {
 	}
 }
 
-func lightsFromAssignments(assignments map[string][N_FLOORS][2]bool, slaveRequests [N_FLOORS][N_BUTTONS]bool) [N_FLOORS][N_BUTTONS]bool {
+func lightsFromAssignments(assignments map[string][N_FLOORS][2]bool, slaveRequests [N_FLOORS][2]bool) [N_FLOORS][N_BUTTONS]bool {
 	var lightsOn [N_FLOORS][N_BUTTONS]bool
 	for _, assignment := range assignments {
 		for i := range N_FLOORS {
@@ -142,9 +142,6 @@ func lightsFromAssignments(assignments map[string][N_FLOORS][2]bool, slaveReques
 				}
 			}
 		}
-	}
-	for i := range N_FLOORS {
-		lightsOn[i][2] = slaveRequests[i][2]
 	}
 	return lightsOn
 }

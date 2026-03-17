@@ -19,11 +19,13 @@ import (
 
 const N_FLOORS = 4
 const N_BUTTONS = 3
+const MAX_OBSTRUCTED_TIME = 20 // [seconds]
 
 type masterData struct {
 	hallRequests    [N_FLOORS][2]bool
 	states          map[string]types.ElevatorState
 	timeSinceUpdate map[string]time.Time
+	obstructedTime map[string]time.Time
 }
 
 func RunMasterBrain(id string) {
@@ -31,6 +33,7 @@ func RunMasterBrain(id string) {
 		hallRequests:    [N_FLOORS][2]bool{{false, false}, {false, false}, {false, false}, {false, false}},
 		states:          make(map[string]types.ElevatorState),
 		timeSinceUpdate: make(map[string]time.Time),
+		obstructedTime: make(map[string]time.Time),
 	}
 
 	//Order calculation
@@ -81,6 +84,18 @@ func RunMasterBrain(id string) {
 			masterData.states[elevatorData.ID] = elevatorData
 			if elevatorData.Floor == -1 {
 				continue
+			}
+			if elevatorData.Obstructed{
+				masterData.obstructedTime[elevatorData.ID] = time.Now()
+			}
+			obstructedTime, wasObstructed := masterData.obstructedTime[elevatorData.ID]
+			if wasObstructed{
+				if !elevatorData.Obstructed{
+					delete(masterData.obstructedTime,elevatorData.ID)
+				}
+				if time.Since(obstructedTime) > MAX_OBSTRUCTED_TIME*time.Second{
+					//REMOVE ELLERNOSÅNT
+				}
 			}
 			fmt.Println("Recived data from: ", elevatorData.ID)
 

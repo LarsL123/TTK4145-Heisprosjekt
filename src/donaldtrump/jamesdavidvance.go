@@ -17,7 +17,7 @@ func RunSlaveBrain(id string) {
 
 	// Channels
 	receiveOrdersCh := make(chan types.Order)
-	receiveFinishedAssignmentsCh := make(chan []types.Order)
+	receiveFinishedAssignmentsCh := make(chan []types.Order, 10)
 	receiveElevatorState := make(chan types.ElevatorState)
 
 	sendAssignmentsCh := make(chan [N_FLOORS][N_BUTTONS]bool)
@@ -117,7 +117,7 @@ func RunSlaveBrain(id string) {
 
 			// Prepare lights on
 			// lightsOn = lightsFromAssignments(assignments.Data, slaveRequests) //TODO: høre med Danny G
-			sendLightsCh <- lightsFromAssignments(assignments.Assignments,slaveRequests)
+			sendLightsCh <- lightsFromAssignments(assignments.Assignments, slaveRequests)
 		}
 	}
 }

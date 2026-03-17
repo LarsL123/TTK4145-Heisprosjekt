@@ -17,25 +17,26 @@ import (
 
 // var masterip string  //Dont know hoe to do this properly.
 
-func StartSlave(id string) *GenericSender[OrdersAndStateUpdate, OrdersAndStateAck]{
-	go ReplyToHeartbeat(id)
+func StartSlave(id string) {
+	fmt.Println("ERRRRRR: STart slave nto done")
+	// go ReplyToHeartbeat(id)
 
-	sendOrdersCh := make(chan OrdersAndStateUpdate)
-	ackCh := make(chan OrdersAndStateAck)
+	// sendOrdersCh := make(chan OrdersAndStateUpdate)
+	// ackCh := make(chan OrdersAndStateAck)
 
-	go bcast.Transmitter(config.Cfg.MasterListenPort, sendOrdersCh)
-	go bcast.Receiver(config.Cfg.SlaveListenPort, ackCh)
+	// go bcast.Transmitter(config.Cfg.MasterListenPort, sendOrdersCh)
+	// go bcast.Receiver(config.Cfg.SlaveListenPort, ackCh)
 
-	orderSender := &GenericSender[OrdersAndStateUpdate, OrdersAndStateAck]{
-		SendCh: sendOrdersCh,
-		AckIn: ackCh,
-		AckResults: make(chan AckResult, 10), // buffered
-	}
+	// orderSender := &GenericSender[OrdersAndStateUpdate, OrdersAndStateAck]{
+	// 	SendCh: sendOrdersCh,
+	// 	AckIn: ackCh,
+	// 	AckResults: make(chan AckResult, 10), // buffered
+	// }
 
-	return orderSender
+	// return orderSender
 }
 
-func ReplyToHeartbeat(id string){
+func ReplyToHeartbeat(id string) {
 	receive := make(chan Heartbeat)
 	go bcast.Receiver(config.Cfg.HeartbeatPort, receive)
 
@@ -48,7 +49,7 @@ func ReplyToHeartbeat(id string){
 	// 	fmt.Println("Aborting")
 	// 	return
 	// }
-	
+
 	fmt.Println("Reciving...")
 	for {
 		// beat := <-receive
@@ -60,31 +61,16 @@ func ReplyToHeartbeat(id string){
 		// }
 
 		reply := Heartbeat{id, Slave, ""}
-		send <-reply
+		send <- reply
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // func SlaveActions(id string, conn net.PacketConn){
 
 // 	conn := conn.DialBroadcastUDP(port)
 
 // 	var buf [1024]byte
-	
+
 // 	for {
 // 		n, _, _ := conn.ReadFrom(buf[0:])
 

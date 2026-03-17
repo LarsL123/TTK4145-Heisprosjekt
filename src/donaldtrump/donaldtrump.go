@@ -20,41 +20,22 @@ import (
 const N_FLOORS = 4
 const N_BUTTONS = 3
 
-// Set test input
-// input := HRAInput{
-//     HallRequests: [4][2]bool{{false, false}, {true, false}, {false, false}, {false, true}},
-//     States: map[string]HRAElevState{
-//         "one": {
-//             Behavior:       "moving",
-//             Floor:          3,
-//             Direction:      "down",
-//             CabRequests:    [4]bool{false, false, false, true},
-//         },
-//         "two": {
-//             Behavior:       "idle",
-//             Floor:          0,
-//             Direction:      "stop",
-//             CabRequests:    [4]bool{false, false, false, false},
-//         },
-//     },
-// }
-
 type masterData struct {
-	hallRequests    [4][2]bool
+	hallRequests    [N_FLOORS][2]bool
 	states          map[string]types.ElevatorState
 	timeSinceUpdate map[string]time.Time
 }
 
 func RunMasterBrain(id string) {
 	masterData := masterData{
-		hallRequests:    [4][2]bool{{false, false}, {false, false}, {false, false}, {false, false}},
+		hallRequests:    [N_FLOORS][2]bool{{false, false}, {false, false}, {false, false}, {false, false}},
 		states:          make(map[string]types.ElevatorState),
 		timeSinceUpdate: make(map[string]time.Time),
 	}
 
 	//Order calculation
 	ordersCh := make(chan ordermanager.HRAInput)
-	calculatedAssignementsCh := make(chan map[string][4][2]bool)
+	calculatedAssignementsCh := make(chan map[string][N_FLOORS][2]bool)
 	go ordermanager.ManageOrders(ordersCh, calculatedAssignementsCh)
 
 	//reciving channel
@@ -69,19 +50,12 @@ func RunMasterBrain(id string) {
 	sendOrderAckCh := make(chan types.HallOrderAck, 10)
 	go bcast.Transmitter(config.Cfg.SlaveListenPort, sendAssignemnetsCh, sendOrderAckCh, ackAssignementCompleted)
 
-	resetTimer := time.NewTicker(50 * time.Second)
-	defer resetTimer.Stop()
-
 	for {
 		select {
 
-		case <-resetTimer.C:
-			//masterData.hallRequests = [4][2]bool{{false, false}, {false, false}, {false, false}, {false, false}}
-			//fmt.Println("Resetting hall orders!", masterData)
-
 		case orderReceived := <-receiveElevatorOrdersCh:
 			fmt.Println("Reciving order ack back")
-			sendOrderAckCh <- types.HallOrderAck{UpdateNr: orderReceived.GetUpdateNr()}
+			sendOrderAckCh <- types.HallOrderAck{UpdateNr: orderReceived.UpdateNr}
 
 			masterData.hallRequests[orderReceived.Floor][orderReceived.Direction] = true
 			ordersCh <- ordermanager.ToHRAInput(masterData.hallRequests, masterData.states) //Loopes back to case
@@ -96,12 +70,11 @@ func RunMasterBrain(id string) {
 			}
 
 			ackAssignementCompleted <- types.FinishedHallAssignmentsAck{
-				UpdateNr: completedAssignments.GetUpdateNr(),
+				UpdateNr: completedAssignments.UpdateNr,
 			}
 
 		case assignment := <-calculatedAssignementsCh:
-			fmt.Println(assignment)
-			fmt.Println("Sending back assignment")
+			fmt.Println("Sending back assignment: ")
 			sendAssignemnetsCh <- types.Assignements{Data: assignment}
 
 		case elevatorData := <-updateStreamCh:
@@ -112,6 +85,5 @@ func RunMasterBrain(id string) {
 			fmt.Println("Recived data from: ", elevatorData.ID)
 
 		}
-
 	}
 }

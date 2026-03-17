@@ -18,37 +18,33 @@ type HallOrder struct {
 	UpdateNr  int
 	Floor     int //Refactor to order type
 	Direction int
-	Timestamp time.Time
+	CreatedAt time.Time
 }
 
 type HallOrderAck struct {
 	UpdateNr int
 }
 
-func (s HallOrder) GetUpdateNr() int {
-	return s.UpdateNr
-}
-
-func (s HallOrderAck) GetUpdateNr() int {
-	return s.UpdateNr
-}
-
 type FinishedHallAssignments struct {
 	UpdateNr  int
 	Orders    []Order
-	Timestamp time.Time
+	CreatedAt time.Time
 }
 
 type FinishedHallAssignmentsAck struct {
 	UpdateNr int
 }
 
-func (s FinishedHallAssignments) GetUpdateNr() int {
-	return s.UpdateNr
+type LivingMessage interface {
+	getCreationTime() time.Time
 }
 
-func (s FinishedHallAssignmentsAck) GetUpdateNr() int {
-	return s.UpdateNr
+func (r HallOrder) getCreationTime() time.Time {
+	return r.CreatedAt
+}
+
+func (r FinishedHallAssignments) getCreationTime() time.Time {
+	return r.CreatedAt
 }
 
 type Assignements struct {

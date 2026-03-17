@@ -12,9 +12,9 @@ var elevator = Elevator{floor: -1,
 	doorOpenDuration: 3.0,
 	dirn:             elevio.MD_Down,
 	obstructed:       false,
-	}
+}
 
-func fsm_sendElevatorState(sendCh chan<- Elevator){
+func fsm_sendElevatorState(sendCh chan<- Elevator) {
 	sendCh <- elevator
 }
 
@@ -78,7 +78,6 @@ func fsm_onFloorArrival(newFloor int, sendClearedRequests chan []types.Order) {
 	elevator.floor = newFloor
 	elevator_print()
 
-
 	elevio.SetFloorIndicator(elevator.floor)
 
 	switch elevator.behaviour {
@@ -141,13 +140,14 @@ func fsm_onNewButtonRequest(buttonRequest elevio.ButtonEvent, sendOrderCh chan<-
 	} else {
 		order := types.Order{
 			Floor: buttonRequest.Floor,
-			Type: types.OrderType(buttonRequest.Button),
+			Type:  types.OrderType(buttonRequest.Button),
 		}
 
 		sendOrderCh <- order
 	}
 }
 
-func fsm_onNewLights(lights [N_FLOORS][N_BUTTONS]bool){
+func fsm_onNewLights(lights [N_FLOORS][N_BUTTONS]bool) {
 	elevator.lights_on = lights
+	fsm_setAllLights()
 }

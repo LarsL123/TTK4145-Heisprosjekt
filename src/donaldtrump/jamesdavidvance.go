@@ -3,6 +3,7 @@ package donaldtrump
 import (
 	"Network-go/network/bcast"
 	"elevatorproject/src/config"
+	elevatormanager "elevatorproject/src/elevatorManager"
 	"elevatorproject/src/elevio"
 	"elevatorproject/src/types"
 	"fmt"
@@ -38,13 +39,12 @@ func RunSlaveBrain(id string) {
 	*/
 
 	// Start ElevatorManager
-	// go elevatormanager.ElevatorManager(receiveElevatorState, receiveOrdersCh, receiveFinishedAssignmentsCh, sendAssignmentsCh)
+	go elevatormanager.ElevatorManager(receiveElevatorState, receiveOrdersCh, receiveFinishedAssignmentsCh, sendAssignmentsCh)
 
 	// Broadcast transmitter & receiver
 	go bcast.Transmitter(config.Cfg.MasterListenPort, sendElevatorState, sendOrdersCh, sendFinishedAssignmentsCh)
 	receiveAssignmentsFromMasterCh := make(chan types.Assignements)
 	go bcast.Receiver(config.Cfg.SlaveListenPort, receiveAssignmentsFromMasterCh, hallOrderAck, finishedOrdersAckCh)
-
 
 	//RESENDING LOGIC:
 	pending := make(map[int]types.HallOrder) // key = UpdateNr
@@ -94,7 +94,7 @@ func RunSlaveBrain(id string) {
 		case ack := <-hallOrderAck:
 			fmt.Println("Recived ACK for order", ack.UpdateNr)
 			delete(pending, ack.UpdateNr)
-		
+
 		case /*finishedOrders :=*/ <-receiveFinishedAssignmentsCh:
 			// fmt.Println("DEN GÅR GJENNOM FSM!!")
 			/*

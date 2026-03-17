@@ -5,30 +5,30 @@ import (
 )
 
 type ElevatorState struct {
-	ID          string
-	Floor       int
-	Direction   string
-	Behaviour   string
-	CabRequests [4]bool
-	CreatedAt   time.Time
-	Obstructed  bool
+	ID         string
+	Floor      int
+	Direction  string
+	Behaviour  string
+	CreatedAt  time.Time
+	Obstructed bool
 }
 
-type HallOrder struct {
-	UpdateNr  int
-	Floor     int //Refactor to order type
-	Direction int
-	CreatedAt time.Time
+type OrderEnvelope struct {
+	ElevatorID string
+	UpdateNr   int
+	Order      Order
+	CreatedAt  time.Time
 }
 
-type HallOrderAck struct {
+type OrderAck struct {
 	UpdateNr int
 }
 
 type FinishedHallAssignments struct {
-	UpdateNr  int
-	Orders    []Order
-	CreatedAt time.Time
+	ElevatorID string
+	UpdateNr   int
+	Orders     []Order
+	CreatedAt  time.Time
 }
 
 type FinishedHallAssignmentsAck struct {
@@ -39,7 +39,7 @@ type LivingMessage interface {
 	GetCreationTime() time.Time
 }
 
-func (r HallOrder) GetCreationTime() time.Time {
+func (r OrderEnvelope) GetCreationTime() time.Time {
 	return r.CreatedAt
 }
 
@@ -48,7 +48,7 @@ func (r FinishedHallAssignments) GetCreationTime() time.Time {
 }
 
 type Assignments struct {
-	Data map[string][4][2]bool
+	Assignments map[string][4][3]bool
 }
 
 type CabOrder struct {

@@ -13,7 +13,7 @@ import (
 func RunSlaveBrain(id string) {
 	var messageCount int = 0
 	var slaveRequests [N_FLOORS][N_BUTTONS]bool
-	var lightsOn [N_FLOORS][N_BUTTONS]bool
+	// var lightsOn [N_FLOORS][N_BUTTONS]bool
 
 	// Channels
 	receiveOrdersCh := make(chan types.Order)
@@ -25,8 +25,8 @@ func RunSlaveBrain(id string) {
 	sendLightsCh := make(chan [N_FLOORS][N_BUTTONS]bool)
 
 	// Send orders to masters
-	sendOrdersCh := make(chan types.HallOrder, 10)
-	hallOrderAck := make(chan types.HallOrderAck, 10)
+	sendOrdersCh := make(chan types.OrderEnvelope, 10)
+	hallOrderAck := make(chan types.OrderAck, 10)
 
 	// Finished Assignments
 	sendFinishedAssignmentsCh := make(chan types.FinishedHallAssignments)
@@ -43,7 +43,7 @@ func RunSlaveBrain(id string) {
 	go bcast.Receiver(config.Cfg.SlaveListenPort, receiveAssignmentsFromMasterCh, hallOrderAck, finishedAssignmentsAckCh)
 
 	//Resending logic:
-	pendingOrders := make(map[int]types.HallOrder)
+	pendingOrders := make(map[int]types.OrderEnvelope)
 	pendingFinishedAssignments := make(map[int]types.FinishedHallAssignments)
 	resendTicker := time.NewTicker(config.Cfg.AckRetryRate)
 
@@ -55,17 +55,15 @@ func RunSlaveBrain(id string) {
 			sendElevatorState <- state
 
 		case order := <-receiveOrdersCh:
-			switch order.Type {
-			case types.Cab:
-				slaveRequests[order.Floor][order.Type] = true // TODO: persist if elevator dies
-				sendAssignmentsCh <- slaveRequests
-			default:
-				messageCount++
-				ho := createHallOrder(id, order, messageCount)
+			// if order.Type == types.Cab {
+			// 	slaveRequests[order.Floor][order.Type] = true
+			// }
+			messageCount++
+			ho := createHallOrder(id, order, messageCount)
 
-				sendOrdersCh <- ho
-				pendingOrders[ho.UpdateNr] = ho
-			}
+			sendOrdersCh <- ho
+			pendingOrders[ho.UpdateNr] = ho
+
 		case <-resendTicker.C:
 			removeTimeouts(pendingOrders)
 			removeTimeouts(pendingFinishedAssignments)
@@ -87,9 +85,9 @@ func RunSlaveBrain(id string) {
 		case finishedOrders := <-receiveFinishedAssignmentsCh:
 			for _, request := range finishedOrders {
 				slaveRequests[request.Floor][request.Type] = false
-				lightsOn[request.Floor][request.Type] = false
+				//	lightsOn[request.Floor][request.Type] = false
 			}
-			sendLightsCh <- lightsOn
+			//sendLightsCh <- lightsOn
 
 			messageCount++
 			finishedAssigment := createFinishedAssignments(id, finishedOrders, messageCount)
@@ -98,8 +96,6 @@ func RunSlaveBrain(id string) {
 			sendFinishedAssignmentsCh <- finishedAssigment
 			pendingFinishedAssignments[finishedAssigment.UpdateNr] = finishedAssigment
 
-			//TODO: choose whether to send full requests or only changes
-
 		case ack := <-finishedAssignmentsAckCh:
 			fmt.Println("Recived ACK for assignemnt", ack.UpdateNr)
 			delete(pendingFinishedAssignments, ack.UpdateNr)
@@ -107,18 +103,21 @@ func RunSlaveBrain(id string) {
 		case assignments := <-receiveAssignmentsFromMasterCh:
 			fmt.Println("Received assignments. Doing the work")
 
-			// Combine hall requests and cab requests before sending
-			for i := range slaveRequests {
-				slaveRequests[i][0] = assignments.Data[id][i][0]
-				slaveRequests[i][1] = assignments.Data[id][i][1]
+			// Send assignments to elevator
+			for floor := range N_FLOORS {
+				slaveRequests[floor][types.HallDown] = assignments.Assignments[id][floor][types.HallDown]
+				slaveRequests[floor][types.HallUp] = assignments.Assignments[id][floor][types.HallUp]
+
+				if assignments.Assignments[id][floor][types.Cab] {
+					slaveRequests[floor][types.Cab] = true
+				}
 			}
 
-			// Send assignments to elevator
 			sendAssignmentsCh <- slaveRequests
 
 			// Prepare lights on
-			lightsOn = lightsFromAssignments(assignments.Data, slaveRequests)
-			sendLightsCh <- lightsOn
+			// lightsOn = lightsFromAssignments(assignments.Data, slaveRequests) //TODO: høre med Danny G
+			sendLightsCh <- lightsFromAssignments(assignments.Assignments,slaveRequests)
 		}
 	}
 }
@@ -132,7 +131,7 @@ func removeTimeouts[T types.LivingMessage](pending map[int]T) {
 	}
 }
 
-func lightsFromAssignments(assignments map[string][N_FLOORS][2]bool, slaveRequests [N_FLOORS][N_BUTTONS]bool) [N_FLOORS][N_BUTTONS]bool {
+func lightsFromAssignments(assignments map[string][N_FLOORS][3]bool, slaveRequests [N_FLOORS][N_BUTTONS]bool) [N_FLOORS][N_BUTTONS]bool {
 	var lightsOn [N_FLOORS][N_BUTTONS]bool
 	for _, assignment := range assignments {
 		for i := range N_FLOORS {
@@ -149,23 +148,24 @@ func lightsFromAssignments(assignments map[string][N_FLOORS][2]bool, slaveReques
 	return lightsOn
 }
 
-func createHallOrder(id string, order types.Order, messageCount int) types.HallOrder {
+func createHallOrder(id string, order types.Order, messageCount int) types.OrderEnvelope {
 	idInt, _ := strconv.Atoi(id)
 
-	return types.HallOrder{
-		Floor:     order.Floor,
-		Direction: int(order.Type),
-		CreatedAt: time.Now(),
-		UpdateNr:  idInt*1000000 + messageCount,
+	return types.OrderEnvelope{
+		ElevatorID: id,
+		Order:      order,
+		CreatedAt:  time.Now(),
+		UpdateNr:   idInt*1000000 + messageCount,
 	}
 }
 
 func createFinishedAssignments(id string, orders []types.Order, messageCount int) types.FinishedHallAssignments {
 	idInt, _ := strconv.Atoi(id)
 	sendToMaster := types.FinishedHallAssignments{
-		UpdateNr:  idInt*1000000 + messageCount,
-		CreatedAt: time.Now(),
-		Orders:    make([]types.Order, len(orders)),
+		ElevatorID: id,
+		UpdateNr:   idInt*1000000 + messageCount,
+		CreatedAt:  time.Now(),
+		Orders:     make([]types.Order, len(orders)),
 	}
 
 	for i, request := range orders {

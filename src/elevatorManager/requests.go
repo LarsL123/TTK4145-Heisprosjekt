@@ -114,6 +114,8 @@ func requests_clearAtCurrentFloor(sendClearedRequests chan []types.Order) {
 	//var clearedRequest elevio.ButtonEvent
 	elevator.requests[elevator.floor][elevio.BT_Cab] = false
 
+
+
 	clearedRequestArray = append(clearedRequestArray, types.Order{
 		Floor:  elevator.floor,
 		Type: types.Cab})
@@ -155,5 +157,6 @@ func requests_clearAtCurrentFloor(sendClearedRequests chan []types.Order) {
 			Floor:  elevator.floor,
 			Type: types.HallDown})
 	}
+	
 	sendClearedRequests <- clearedRequestArray
 }

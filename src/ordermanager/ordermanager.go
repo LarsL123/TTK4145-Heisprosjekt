@@ -48,7 +48,7 @@ type HRAInput struct {
 	States       map[string]HRAElevState `json:"states"`
 }
 
-func ToHRAInput(hallRequests [4][2]bool, elevatorStates map[string]types.ElevatorState) HRAInput {
+func ToHRAInput(hallRequests [4][2]bool, cabRequests map[string][4]bool, elevatorStates map[string]types.ElevatorState) HRAInput {
 
 	inputStates := make(map[string]HRAElevState)
 
@@ -57,7 +57,7 @@ func ToHRAInput(hallRequests [4][2]bool, elevatorStates map[string]types.Elevato
 			Behavior:    elevatorState.Behaviour,
 			Floor:       elevatorState.Floor,
 			Direction:   elevatorState.Direction,
-			CabRequests: elevatorState.CabRequests,
+			CabRequests: cabRequests[id],
 		}
 	}
 

@@ -64,14 +64,13 @@ func ElevatorManager(elevStateCh chan<- types.ElevatorState, sendOrderCh chan ty
 
 		case <-sendStateTicker.C:
 			elevStateCh <- types.ElevatorState{
-				Floor:       elevator.floor,
-				Direction:   dirnToString(elevator.dirn),
-				Behaviour:   behaviourToString(elevator.behaviour),
-				CabRequests: fsm_getCabRequests(),
-				CreatedAt:   time.Now(),
-				Obstructed:  elevator.obstructed,
+				Floor:      elevator.floor,
+				Direction:  dirnToString(elevator.dirn),
+				Behaviour:  behaviourToString(elevator.behaviour),
+				CreatedAt:  time.Now(),
+				Obstructed: elevator.obstructed,
 			}
-		case newLights := <- receiveLIghtsCh:
+		case newLights := <-receiveLIghtsCh:
 			fsm_onNewLights(newLights)
 		}
 	}

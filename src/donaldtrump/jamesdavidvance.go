@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-func RunSlaveBrain(id string) {
+func RunSlaveBrain(id string, port string) {
 
 	var readyToSendOrder bool = true
 	var messageCount int = 0

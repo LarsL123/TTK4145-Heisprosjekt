@@ -14,7 +14,7 @@ import (
 const N_FLOORS = 4
 
 // TODO: Lage en config_load funksjon
-const address = "0.0.0.0:15657"
+var address = "0.0.0.0:" + config.Cfg.ElevatorPort
 const N_BUTTONS = 3
 const DOOR_OPEN_DURATION = 3 // [seconds]
 

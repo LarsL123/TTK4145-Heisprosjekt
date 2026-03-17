@@ -1,7 +1,7 @@
 #!/bin/sh
 # Run up to 3 elevators + driver for local testing
 
-PORTS="15657" #PORTS="15657 15658 15659"
+PORTS="15657 15661" #PORTS="15657 15658 15659"
 
 echo "Kjører test!"
 echo $PORTS
@@ -35,6 +35,9 @@ sleep 0.2
 # gnome-terminal -- bash -c "cd ../src/reelection; go test -run TestNy2; exec bash" &
 gnome-terminal -- bash -c "go run src/main.go -id=1; exec bash" &
 gnome-terminal -- bash -c "go run src/main.go -id=2; exec bash" &
+
+gnome-terminal -- bash -c "go run src/main.go -id=3 -port=15661; exec bash" &
+
 
 
 # Keep script alive until Ctrl+C

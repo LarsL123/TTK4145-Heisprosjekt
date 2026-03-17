@@ -28,7 +28,6 @@ func ElevatorManager(elevStateCh chan<- types.ElevatorState, sendOrderCh chan ty
 	driverFloorSensorCh := make(chan int)
 	driverObstructionCh := make(chan bool)
 	driverStopButtonCh := make(chan bool)
-	//doorTimeoutCh 				:= make(chan int)
 
 	go elevio.PollFloorSensor(driverFloorSensorCh)
 	go elevio.PollButtons(driverButtonRequestsCh)
@@ -51,7 +50,6 @@ func ElevatorManager(elevStateCh chan<- types.ElevatorState, sendOrderCh chan ty
 		case newButtonRequest := <-driverButtonRequestsCh:
 			fmt.Println("Button pressed")
 			fsm_onNewButtonRequest(newButtonRequest, sendOrderCh)
-			// TODO: fikse at requesten sendes til master
 
 		case floorArrivedAt := <-driverFloorSensorCh:
 			fmt.Printf("Arrived at floor %d\n", floorArrivedAt)
@@ -65,7 +63,7 @@ func ElevatorManager(elevStateCh chan<- types.ElevatorState, sendOrderCh chan ty
 			fsm_onObstruction(obstruction)
 
 		case <-sendStateTicker.C:
-			elevStateCh <- types.ElevatorState{ //Export interface so we dont have to expose Elevator internals. Daniel remove comment when read.
+			elevStateCh <- types.ElevatorState{
 				Floor:       elevator.floor,
 				Direction:   dirnToString(elevator.dirn),
 				Behaviour:   behaviourToString(elevator.behaviour),

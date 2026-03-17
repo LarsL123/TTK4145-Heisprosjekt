@@ -11,12 +11,14 @@ import (
 	"elevatorproject/src/types"
 )
 
-const N_FLOORS = 4
+
 
 // TODO: Lage en config_load funksjon
-const address = "0.0.0.0:15657"
+var address = config.Cfg.ElevatorAddress
 const N_BUTTONS = 3
 const DOOR_OPEN_DURATION = 3 // [seconds]
+var N_FLOORS = config.Cfg.N_FLOORS
+
 
 func ElevatorManager(elevStateCh chan<- types.ElevatorState, sendOrderCh chan types.Order, sendFinishedOrderch chan []elevio.ButtonEvent, receiveAssignmentsCh chan [N_FLOORS][N_BUTTONS]bool) {
 	// Spørsmål til studass: er det greit å heller definere elevator på package level, slipper dermed å passe elevator pointer til alle funksjonene som skal endre på den??

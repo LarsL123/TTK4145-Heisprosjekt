@@ -46,7 +46,7 @@ func TestNewSender(t *testing.T){
 	go bcast.Receiver(config.Cfg.MasterListenPort,ackCh)
 
 
-	go sendOrdersWithAck(sendOrdersFromElevatorch, sendOrdersToMasterCh,ackCh)
+	go SendOrdersWithAck(sendOrdersFromElevatorch, sendOrdersToMasterCh,ackCh)
 	go masterAckingOrders(sendOrdersToMasterCh,ackCh)
 	sendOrdersFromElevatorch <- types.HallOrder{
 		UpdateNr: 1,

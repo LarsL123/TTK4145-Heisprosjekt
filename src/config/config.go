@@ -21,8 +21,11 @@ type Config struct {
 
 	ElevatorUpdateRate time.Duration `json:"elevatorUpdateRate"`
 
-	// N_FLOORS int `json:"nFloors"`
-	// N_BUTTONS int `json:"nButtons"` //TODO: Er dette forksjellige i elevatorManager og orderManager? Isåfall hva gjør man?
+	
+	N_FLOORS int `json:"nFloors"`
+	ElevatorAddress string `json:"address"`
+
+	// N_BUTTONS int `json:"nButtons"` //TODO: Er dette forksjellige i elevatorManager og orderManager? Isåfall hva gjør man? Hardcode? Trenger aldri å endre det egt.
 }
 
 var Cfg Config
@@ -40,6 +43,9 @@ var defaultValues = Config{
 	AckTimeout:   3 * time.Second,
 
 	ElevatorUpdateRate: 2 * time.Second,
+
+	N_FLOORS: 4,
+	ElevatorAddress: "0.0.0.0:15657",
 }
 
 // Load returns the config, falling back to defaults

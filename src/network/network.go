@@ -9,27 +9,29 @@ import (
 )
 
 
-func SendOrdersWithAck(receiveOrdersFromSlaveCh chan types.HallOrder, sendOrdersToMasterCh chan types.HallOrder, AckOrderCh chan types.HallOrderAck) {
-	var orders = make(map[int]*ResendableOrder)
+func SendOrdersWithAck(receiveOrdersFromSlaveCh chan types.HallOrder, sendOrdersToMasterCh chan types.HallOrder, receiveAckOrderCh chan types.HallOrderAck) {
+	var unackedOrders = make(map[int]types.HallOrder)
 	resendTicker := time.NewTicker(config.Cfg.AckRetryRate)
+	defer resendTicker.Stop()
 
 	for {
 		select {
 		case order := <-receiveOrdersFromSlaveCh:
-			orders[order.UpdateNr] = &ResendableOrder{
-                Order: order,
-                Acked: false,
-            }
+			unackedOrders[order.UpdateNr] = order
+
             sendOrdersToMasterCh <- order
             
 		case <-resendTicker.C:
-			for _, order := range orders {
+			for _, order := range unackedOrders {
 				if !order.Acked {
 					sendOrdersToMasterCh <- order.Order
 				}
 			}
-		case AckedOrder := <- AckOrderCh:
-            orders[AckedOrder.UpdateNr].Acked = true
+		case AckedOrder := <- receiveAckOrderCh:
+			if unackedOrders[AckedOrder.UpdateNr] == nil{
+				break
+			}
+            unackedOrders[AckedOrder.UpdateNr].Acked = true
             fmt.Printf("Order %d acked\n", AckedOrder.UpdateNr)
 		}
 	}

@@ -40,11 +40,10 @@ func RunSlaveBrain(id string) {
 	go bcast.Transmitter(config.Cfg.MasterListenPort, sendElevatorState, sendOrdersCh, sendFinishedAssignmentsCh)
 	go bcast.Receiver(config.Cfg.SlaveListenPort, receiveAssignmentsFromMasterCh, hallOrderAck, finishedAssignmentsAckCh)
 
-	//RESENDING LOGIC:
+	//Resending logic:
 	pendingOrders := make(map[int]types.HallOrder)
 	pendingFinishedAssignments := make(map[int]types.FinishedHallAssignments)
-	resendTicker := time.NewTicker(200 * time.Millisecond)
-	timeout := 5 * time.Second
+	resendTicker := time.NewTicker(config.Cfg.AckRetryRate)
 
 	for {
 		select {
@@ -54,35 +53,27 @@ func RunSlaveBrain(id string) {
 			sendElevatorState <- state
 
 		case order := <-receiveOrdersCh:
-			if order.Type != types.Cab {
+			switch order.Type {
+			case types.Cab:
+				slaveRequests[order.Floor][order.Type] = true // TODO: persist if elevator dies
+				sendAssignmentsCh <- slaveRequests
+			default:
 				messageCount++
 				ho := createHallOrder(id, order, messageCount)
 
 				sendOrdersCh <- ho
 				pendingOrders[ho.UpdateNr] = ho
-
-			} else {
-				slaveRequests[order.Floor][order.Type] = true // TODO: persist if elevator dies
-				sendAssignmentsCh <- slaveRequests
 			}
-
 		case <-resendTicker.C:
+			removeTimeouts(pendingOrders)
+			removeTimeouts(pendingFinishedAssignments)
+
 			for updateNr, ho := range pendingOrders {
-				if time.Since(ho.CreatedAt) > timeout {
-					fmt.Println("Dropping order:", updateNr)
-					delete(pendingOrders, updateNr)
-					continue
-				}
 				fmt.Println("Resending Order: ", updateNr)
 				sendOrdersCh <- ho
 			}
 
 			for updateNr, ho := range pendingFinishedAssignments {
-				if time.Since(ho.CreatedAt) > timeout {
-					fmt.Println("Dropping assignemnt:", updateNr)
-					delete(pendingFinishedAssignments, updateNr)
-					continue
-				}
 				fmt.Println("Resending Assignment: ", updateNr)
 				sendFinishedAssignmentsCh <- ho
 			}
@@ -92,7 +83,6 @@ func RunSlaveBrain(id string) {
 			delete(pendingOrders, ack.UpdateNr)
 
 		case finishedOrders := <-receiveFinishedAssignmentsCh:
-
 			for _, request := range finishedOrders {
 				slaveRequests[request.Floor][request.Type] = false
 			}
@@ -101,8 +91,6 @@ func RunSlaveBrain(id string) {
 			finishedAssigment := createFinishedAssignments(id, finishedOrders, messageCount)
 
 			fmt.Println("Clearing assignment")
-
-			// Send
 			sendFinishedAssignmentsCh <- finishedAssigment
 			pendingFinishedAssignments[finishedAssigment.UpdateNr] = finishedAssigment
 
@@ -124,6 +112,15 @@ func RunSlaveBrain(id string) {
 			// Send assignments to elevator
 			sendAssignmentsCh <- slaveRequests
 
+		}
+	}
+}
+
+func removeTimeouts[T types.LivingMessage](pending map[int]T) {
+	for updateNr, ho := range pending {
+		if time.Since(ho.GetCreationTime()) > config.Cfg.AckTimeout {
+			fmt.Println("Dropping order:", updateNr)
+			delete(pending, updateNr)
 		}
 	}
 }

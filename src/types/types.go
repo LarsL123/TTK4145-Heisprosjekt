@@ -36,14 +36,14 @@ type FinishedHallAssignmentsAck struct {
 }
 
 type LivingMessage interface {
-	getCreationTime() time.Time
+	GetCreationTime() time.Time
 }
 
-func (r HallOrder) getCreationTime() time.Time {
+func (r HallOrder) GetCreationTime() time.Time {
 	return r.CreatedAt
 }
 
-func (r FinishedHallAssignments) getCreationTime() time.Time {
+func (r FinishedHallAssignments) GetCreationTime() time.Time {
 	return r.CreatedAt
 }
 

@@ -42,13 +42,10 @@ func RunSlaveBrain(id string) {
 	go bcast.Receiver(config.Cfg.SlaveListenPort, receiveAssignmentsFromMasterCh, hallOrderAck, finishedAssignmentsAckCh)
 
 	//RESENDING LOGIC:
-	pending := make(map[int]types.HallOrder) // key = UpdateNr
+	pendingOrders := make(map[int]types.HallOrder)                            // key = UpdateNr
+	pendingFinishedAssignments := make(map[int]types.FinishedHallAssignments) // key = UpdateNr
 	resendTicker := time.NewTicker(200 * time.Millisecond)
 	timeout := 5 * time.Second
-
-	pending2 := make(map[int]types.FinishedHallAssignments) // key = UpdateNr
-
-	pending3 := make(map[int]types.LivingMessage) // key = UpdateNr
 
 	for {
 		select {
@@ -76,33 +73,33 @@ func RunSlaveBrain(id string) {
 
 				// Send
 				sendOrdersCh <- ho
-				pending3[ho.UpdateNr] = ho
+				pendingOrders[ho.UpdateNr] = ho
 			}
 
 		case <-resendTicker.C:
-			for updateNr, ho := range pending {
+			for updateNr, ho := range pendingOrders {
 				if time.Since(ho.CreatedAt) > timeout {
 					fmt.Println("Dropping order:", updateNr)
-					delete(pending, updateNr)
+					delete(pendingOrders, updateNr)
 					continue
 				}
 				fmt.Println("Resending Order: ", updateNr)
 				sendOrdersCh <- ho
 			}
 
-			for updateNr, ho := range pending2 {
+			for updateNr, ho := range pendingFinishedAssignments {
 				if time.Since(ho.CreatedAt) > timeout {
 					fmt.Println("Dropping assignemnt:", updateNr)
-					delete(pending2, updateNr)
+					delete(pendingFinishedAssignments, updateNr)
 					continue
 				}
-				fmt.Println("Resending Order: ", updateNr)
+				fmt.Println("Resending Assignment: ", updateNr)
 				sendFinishedAssignmentsCh <- ho
 			}
 
 		case ack := <-hallOrderAck:
 			fmt.Println("Recived ACK for order", ack.UpdateNr)
-			delete(pending, ack.UpdateNr)
+			delete(pendingOrders, ack.UpdateNr)
 
 		case finishedOrders := <-receiveFinishedAssignmentsCh:
 
@@ -126,13 +123,13 @@ func RunSlaveBrain(id string) {
 
 			// Send
 			sendFinishedAssignmentsCh <- sendToMaster
-			pending2[sendToMaster.UpdateNr] = sendToMaster
+			pendingFinishedAssignments[sendToMaster.UpdateNr] = sendToMaster
 
 			//TODO: choose whether to send full requests or only changes
 
 		case ack := <-finishedAssignmentsAckCh:
 			fmt.Println("Recived ACK for assignemnt", ack.UpdateNr)
-			delete(pending2, ack.UpdateNr)
+			delete(pendingFinishedAssignments, ack.UpdateNr)
 
 		case assignments := <-receiveAssignmentsFromMasterCh:
 			fmt.Println("Received assignments. Doing the work")

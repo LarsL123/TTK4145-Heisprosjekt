@@ -21,6 +21,7 @@ type Config struct {
 
 	ElevatorUpdateRate time.Duration `json:"elevatorUpdateRate"`
 
+	MaxOrderSuspendTime time.Duration `json:"maxOrderSuspendTime"`
 	// N_FLOORS int `json:"nFloors"`
 	// N_BUTTONS int `json:"nButtons"` //TODO: Er dette forksjellige i elevatorManager og orderManager? Isåfall hva gjør man?
 }
@@ -40,6 +41,8 @@ var defaultValues = Config{
 	AckTimeout:   4 * time.Second,
 
 	ElevatorUpdateRate: 2 * time.Second,
+
+	MaxOrderSuspendTime: 20*time.Second,
 }
 
 // Load returns the config, falling back to defaults

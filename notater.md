@@ -1,9 +1,16 @@
 ## Notater
 
-## Plan for hvem som progger hva (Per 26.02.26)
- * Brage tar OrderHandler
- * Daniel tar elevatorManager og kan prøve å lage et slags reelection system, kan prøve å titte på network i den sammenhengen.
- * Lars hva vil du sjef?
+## Hva mangler vi sjef
+* Timeout på orders
+* Obstruction solution
+* Resend Assignments 
+* Backup
+* Reconfiguratiom etter at en heis ble koblet fra (huske gamle caborders)
+* Process pair
+
+Testing:
+* Packet loss
+* Resten av fat
 
 ## Tilbakemelding fra Sverre:
 * Main challenge of primary-backup is configuring and reconfiguring the system

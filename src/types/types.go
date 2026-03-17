@@ -11,6 +11,12 @@ type ElevatorState struct {
 	Behaviour  string
 	CreatedAt  time.Time
 	Obstructed bool
+	Suspended  SuspendedType
+}
+
+type SuspendedType struct {
+	IsSuspended bool
+	TimeStamp   time.Time
 }
 
 type OrderEnvelope struct {
@@ -66,4 +72,22 @@ const (
 type Order struct {
 	Floor int
 	Type  OrderType
+}
+
+type AssignedToAtTime struct {
+	ElevatorId string
+	TimeStamp  time.Time
+}
+
+func OrderTypeToString(ordertype OrderType) string {
+	switch ordertype {
+	case HallDown:
+		return "HallDown"
+	case HallUp:
+		return "Hallup"
+	case Cab:
+		return "Cab"
+	default:
+		return "Invalid OrderType"
+	}
 }

@@ -23,7 +23,7 @@ func main() {
 	master := donaldtrump.NewMaster(id, isMaster, forwardOrders)
 	go master.Start()
 	go reelection.ReelectionFSM(id, isMaster)
-	// go donaldtrump.RunBackup(forwardOrders) //TODO
+	go donaldtrump.RunBackup(isMaster, forwardOrders) //TODO
 	go donaldtrump.RunSlaveBrain(id, forwardOrders)
 
 	select {}

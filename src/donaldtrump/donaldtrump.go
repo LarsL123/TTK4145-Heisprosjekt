@@ -253,7 +253,6 @@ func (m *Master) pushOrdersToNewMaster() {
 		if hallReq[floor] {
 			m.transferOrders <- types.Order{Floor: floor, Type: types.Cab}
 		}
-
 	}
 }
 

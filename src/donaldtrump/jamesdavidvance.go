@@ -14,7 +14,6 @@ func RunSlaveBrain(id string, transferDeadMaster chan types.Order) {
 	var messageCount int = 0
 	var slaveRequests [N_FLOORS][N_BUTTONS]bool
 
-
 	// Channels
 	receiveOrdersCh := make(chan types.Order)
 	receiveFinishedAssignmentsCh := make(chan []types.Order, 10)
@@ -50,7 +49,7 @@ func RunSlaveBrain(id string, transferDeadMaster chan types.Order) {
 	for {
 		select {
 
-		case order := <- transferDeadMaster:
+		case order := <-transferDeadMaster:
 			receiveOrdersCh <- order
 
 		case state := <-receiveElevatorState:
@@ -99,7 +98,7 @@ func RunSlaveBrain(id string, transferDeadMaster chan types.Order) {
 			delete(pendingFinishedAssignments, ack.UpdateNr)
 
 		case as := <-receiveAssignmentsFromMasterCh:
-			assignments := as.Assignments
+			assignments := as.Assignments //Might be an idea to rename struct or something
 			fmt.Println("Received assignments. Doing the work")
 
 			// Send assignments to elevator

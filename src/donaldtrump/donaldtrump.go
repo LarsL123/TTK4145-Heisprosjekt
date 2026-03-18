@@ -108,15 +108,14 @@ func (m *Master) Start() {
 }
 
 func (m *Master) runLoop() {
-
 	for {
 		if !m.isMaster {
 			m.drainChannels()
 			continue
 		}
 
-		if m.suspendTimedOutElevators(){
-			m.runRassignment()
+		if m.suspendTimedOutElevators() {
+			m.runReassignment()
 		}
 
 		select {
@@ -131,7 +130,7 @@ func (m *Master) runLoop() {
 
 			hasChanged := m.data.storeOrder(orderReceived.Order, orderReceived.ElevatorID)
 			if hasChanged {
-				m.runRassignment()//Loops back to case
+				m.runReassignment() //Loops back to case
 			}
 
 		case completedAssignments := <-m.completedAssignmentCh:
@@ -139,58 +138,19 @@ func (m *Master) runLoop() {
 
 			if m.data.removeOrders(completedAssignments.Orders, completedAssignments.ElevatorID) {
 				m.data.clearAssignmentTimestamps(completedAssignments.Orders)
-				m.runRassignment()
+				m.runReassignment()
 			}
 
 		case assignments := <-m.rawAssignmentsCh:
-
-
-			assignmentOut := make(map[string][N_FLOORS][N_BUTTONS]bool)
-
-			// Looping and creating map of assignments to send out to elevators
-			for id, _ := range assignments {
-				arr := [N_FLOORS][N_BUTTONS]bool{}
-				for i := 0; i < N_FLOORS; i++ {
-					arr[i] = [N_BUTTONS]bool{assignments[id][i][types.HallUp], assignments[id][i][types.HallDown], m.data.cabRequests[id][i]}
-
-					// Checking if last assigned elevator to assignment is not the same and updating timeStamp if there is a new elevator assigned to it
-					if m.data.timeSinceAssignmentUpdate[i][types.HallUp].ElevatorId != id && assignments[id][i][types.HallUp] {
-						m.data.timeSinceAssignmentUpdate[i][types.HallUp] = types.AssignedToAtTime{
-							ElevatorId: id,
-							TimeStamp:  time.Now(),
-						}
-					}
-					if m.data.timeSinceAssignmentUpdate[i][types.HallDown].ElevatorId != id && assignments[id][i][types.HallDown] {
-						m.data.timeSinceAssignmentUpdate[i][types.HallDown] = types.AssignedToAtTime{
-							ElevatorId: id,
-							TimeStamp:  time.Now(),
-						}
-					}
-				}
-				assignmentOut[id] = arr
-			}
-
-			// Unsuspending elevators:
-			for id, suspend := range m.data.suspendedElevators {
-				if suspend.IsSuspended && time.Since(suspend.TimeStamp) > config.Cfg.MaxElevatorSuspendTime {
-					m.data.suspendedElevators[id] = types.SuspendedType{
-						IsSuspended: false,
-						TimeStamp:   time.Now(),
-					}
-
-				}
-			}
-
-			m.sendAssignmentsCh <- types.Assignments{Assignments: assignmentOut}
+			m.data.unsuspendElevators()
+			m.updateAssignmentTimestamps(assignments)
+			m.sendAssignmentsCh <- types.Assignments{Assignments: m.mergeAssignmentsWithCabRequests(assignments)} // TODO: Rename this channel? Might be inaccurate
 
 		case elevatorData := <-m.updateStreamCh:
 			// TODO: if message from suspended elevator, unsuspend if elevatordata != from m.data.states[elevatorid]
-
-			if elevatorData.Floor == -1 {
+			if elevatorData.Floor == -1 { //TODO: Should maybe change this, might be an idea to let the elevatordata be saved but not used for reassignment if between floors
 				continue
 			}
-
-
 
 			m.data.states[elevatorData.ID] = elevatorData
 			fmt.Println("Received data from: ", elevatorData.ID)
@@ -198,12 +158,57 @@ func (m *Master) runLoop() {
 	}
 }
 
-func (m *Master) runRassignment() {
+func (d *masterData) unsuspendElevators() {
+	for id, suspend := range d.suspendedElevators {
+		if suspend.IsSuspended && time.Since(suspend.TimeStamp) > config.Cfg.MaxElevatorSuspendTime {
+			d.suspendedElevators[id] = types.SuspendedType{
+				IsSuspended: false,
+				TimeStamp:   time.Now(),
+			}
+		}
+	}
+}
+
+func (m *Master) mergeAssignmentsWithCabRequests(rawAssignments map[string][N_FLOORS][2]bool) map[string][N_FLOORS][N_BUTTONS]bool {
+	assignmentOut := make(map[string][N_FLOORS][N_BUTTONS]bool)
+
+	// Looping and creating map of assignments to send out to elevators
+	for id := range rawAssignments {
+		arr := [N_FLOORS][N_BUTTONS]bool{}
+		for i := 0; i < N_FLOORS; i++ {
+			arr[i] = [N_BUTTONS]bool{rawAssignments[id][i][types.HallUp], rawAssignments[id][i][types.HallDown], m.data.cabRequests[id][i]}
+		}
+		assignmentOut[id] = arr
+	}
+	return assignmentOut
+}
+
+func (m *Master) updateAssignmentTimestamps(assignments map[string][N_FLOORS][2]bool) {
+	for id := range assignments {
+		for floor := range N_FLOORS {
+			if m.data.timeSinceAssignmentUpdate[floor][types.HallUp].ElevatorId != id && assignments[id][floor][types.HallUp] {
+				m.data.timeSinceAssignmentUpdate[floor][types.HallUp] = types.AssignedToAtTime{
+					ElevatorId: id,
+					TimeStamp:  time.Now(),
+				}
+			}
+
+			if m.data.timeSinceAssignmentUpdate[floor][types.HallDown].ElevatorId != id && assignments[id][floor][types.HallDown] {
+				m.data.timeSinceAssignmentUpdate[floor][types.HallDown] = types.AssignedToAtTime{
+					ElevatorId: id,
+					TimeStamp:  time.Now(),
+				}
+			}
+		}
+	}
+}
+
+func (m *Master) runReassignment() {
 	m.calculateAssignmentsCh <- ordermanager.ToHRAInput(m.data.hallRequests, m.data.cabRequests, m.data.states, m.data.suspendedElevators)
 }
 
 func (d *masterData) clearAssignmentTimestamps(orders []types.Order) {
-	for _, order := range orders { 
+	for _, order := range orders {
 		if order.Type != types.Cab {
 			fmt.Printf("Clearing order: Floor: %d, Dirn: %s Assigned to: %s \n", order.Floor, order.Type.ToString(), d.timeSinceAssignmentUpdate[order.Floor][order.Type].ElevatorId)
 			d.timeSinceAssignmentUpdate[order.Floor][order.Type] = types.AssignedToAtTime{
@@ -214,7 +219,7 @@ func (d *masterData) clearAssignmentTimestamps(orders []types.Order) {
 	}
 }
 
-func (m *Master) suspendTimedOutElevators() bool{
+func (m *Master) suspendTimedOutElevators() bool {
 	// Suspending elevators that have assignments over maxOrderSuspendTime (Could be moved to some other case)
 	var elevWasSuspended = false
 
@@ -234,8 +239,10 @@ func (m *Master) suspendTimedOutElevators() bool{
 
 				m.data.suspendedElevators[id] = tempState.Suspended
 				fmt.Printf("Suspended elevator: %s\n", id)
-				
-				elevWasSuspended = true				
+
+				m.data.timeSinceAssignmentUpdate[floor][orderType].TimeStamp = time.Now()
+
+				elevWasSuspended = true
 			}
 		}
 	}

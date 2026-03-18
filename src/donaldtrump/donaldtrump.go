@@ -234,11 +234,10 @@ func (m *Master) pushOrdersToNewMaster(){
 				m.transferOrders <- types.Order{Floor: floor, Type: types.OrderType(button)}
 			}
 		}
-		hallReq := m.data.cabRequests[m.id]
+		hallReq := m.data.cabRequests[m.id] //Pushing only for this id
 		if(hallReq[floor]){
 			m.transferOrders <- types.Order{Floor: floor, Type: types.Cab}
 		}
-
 	}
 }
 

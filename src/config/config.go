@@ -15,6 +15,8 @@ type Config struct {
 
 	SlaveListenPort      int           `json:"slaveListenPort"`
 	MasterListenPort     int           `json:"masterListenPort"`
+	BackupPort           int           `json:"backupPort"`
+
 	NewBackupTimeoutTime time.Duration `json:"newBackupTimeoutTime"`
 	NewMasterTimeoutTime time.Duration `json:"newMasterTimeoutTime"`
 
@@ -40,6 +42,7 @@ var defaultValues = Config{
 
 	SlaveListenPort:  15649,
 	MasterListenPort: 15650,
+	BackupPort: 15651,
 
 	AckRetryRate: 200 * time.Millisecond,
 	AckTimeout:   4 * time.Second,

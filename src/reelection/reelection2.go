@@ -28,8 +28,6 @@ func ReelectionFSM(selfID string, isMasterCh chan bool) {
 	heartbeatCh := make(chan network.Heartbeat, 32)
 	go bcast.Receiver(config.Cfg.HeartbeatPort, heartbeatCh)
 
-	heartbeat := network.Heartbeat{ID: selfID, Role: role}
-
 	startRole := func(r network.Role) {
 		isMasterCh <- false //Er dette feil sjef??
 
@@ -95,8 +93,7 @@ func ReelectionFSM(selfID string, isMasterCh chan bool) {
 
 		case <-heartbeatTicker.C:
 			if role != network.Slave {
-				heartbeat.Role = role
-				sendHeartbeatCh <- heartbeat
+				sendHeartbeatCh <- network.Heartbeat{ID: selfID, Role: role}
 			}
 
 		}

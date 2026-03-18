@@ -13,7 +13,7 @@ import (
 func RunSlaveBrain(id string) {
 	var messageCount int = 0
 	var slaveRequests [N_FLOORS][N_BUTTONS]bool
-	// var lightsOn [N_FLOORS][N_BUTTONS]bool
+	
 
 	// Channels
 	receiveOrdersCh := make(chan types.Order)
@@ -55,9 +55,6 @@ func RunSlaveBrain(id string) {
 			sendElevatorState <- state
 
 		case order := <-receiveOrdersCh:
-			// if order.Type == types.Cab {
-			// 	slaveRequests[order.Floor][order.Type] = true
-			// }
 			messageCount++
 			ho := createHallOrder(id, order, messageCount)
 
@@ -85,9 +82,7 @@ func RunSlaveBrain(id string) {
 		case finishedOrders := <-receiveFinishedAssignmentsCh:
 			for _, request := range finishedOrders {
 				slaveRequests[request.Floor][request.Type] = false
-				//	lightsOn[request.Floor][request.Type] = false
 			}
-			//sendLightsCh <- lightsOn
 
 			messageCount++
 			finishedAssigment := createFinishedAssignments(id, finishedOrders, messageCount)
@@ -100,15 +95,16 @@ func RunSlaveBrain(id string) {
 			fmt.Println("Recived ACK for assignemnt", ack.UpdateNr)
 			delete(pendingFinishedAssignments, ack.UpdateNr)
 
-		case assignments := <-receiveAssignmentsFromMasterCh:
+		case as := <-receiveAssignmentsFromMasterCh:
+			assignments := as.Assignments
 			fmt.Println("Received assignments. Doing the work")
 
 			// Send assignments to elevator
 			for floor := range N_FLOORS {
-				slaveRequests[floor][types.HallDown] = assignments.Assignments[id][floor][types.HallDown]
-				slaveRequests[floor][types.HallUp] = assignments.Assignments[id][floor][types.HallUp]
+				slaveRequests[floor][types.HallDown] = assignments[id][floor][types.HallDown]
+				slaveRequests[floor][types.HallUp] = assignments[id][floor][types.HallUp]
 
-				if assignments.Assignments[id][floor][types.Cab] {
+				if assignments[id][floor][types.Cab] {
 					slaveRequests[floor][types.Cab] = true
 				}
 			}
@@ -116,8 +112,7 @@ func RunSlaveBrain(id string) {
 			sendAssignmentsCh <- slaveRequests
 
 			// Prepare lights on
-			// lightsOn = lightsFromAssignments(assignments.Data, slaveRequests) //TODO: høre med Danny G
-			sendLightsCh <- lightsFromAssignments(assignments.Assignments, slaveRequests)
+			sendLightsCh <- lightsFromAssignments(assignments, slaveRequests)
 		}
 	}
 }

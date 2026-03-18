@@ -23,6 +23,8 @@ func main() {
 	flag.Parse()
 
 	isMaster := make(chan bool)
+	// dataFromBackup := make(chan types.BackupData)
+
 	master := donaldtrump.NewMaster(id, isMaster)
 	go master.Start()
 

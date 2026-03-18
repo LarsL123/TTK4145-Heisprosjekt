@@ -4,6 +4,8 @@ import (
 	"time"
 )
 
+const N_FLOORS = 4
+
 type ElevatorState struct {
 	ID         string
 	Floor      int
@@ -54,7 +56,7 @@ func (r FinishedHallAssignments) GetCreationTime() time.Time {
 }
 
 type Assignments struct {
-	Assignments map[string][4][3]bool
+	Assignments map[string][N_FLOORS][3]bool
 }
 
 type CabOrder struct {
@@ -85,6 +87,11 @@ func (orderType OrderType) ToString() string {
 type Order struct {
 	Floor int
 	Type  OrderType
+}
+
+type BackupData struct{
+	hallRequests              [N_FLOORS][2]bool
+	cabRequests               map[string][N_FLOORS]bool
 }
 
 type AssignedToAtTime struct {

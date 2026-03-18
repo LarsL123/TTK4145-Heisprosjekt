@@ -40,14 +40,14 @@ import (
 const N_FLOORS = types.N_FLOORS
 
 type HRAElevState struct {
-	Behavior    string  `json:"behaviour"`
-	Floor       int     `json:"floor"`
-	Direction   string  `json:"direction"`
+	Behavior    string         `json:"behaviour"`
+	Floor       int            `json:"floor"`
+	Direction   string         `json:"direction"`
 	CabRequests [N_FLOORS]bool `json:"cabRequests"`
 }
 
 type HRAInput struct {
-	HallRequests       [N_FLOORS][2]bool              `json:"hallRequests"`
+	HallRequests       [N_FLOORS][2]bool       `json:"hallRequests"`
 	States             map[string]HRAElevState `json:"states"`
 	SuspendedElevators map[string]types.SuspendedType
 }
@@ -94,9 +94,8 @@ func ManageOrders(OrdersCh chan HRAInput, AssignmentsCh chan map[string][N_FLOOR
 		case input := <-OrdersCh:
 			fmt.Println("Calculating orders")
 
-			for id, suspended := range input.SuspendedElevators {
-				if suspended.IsSuspended {
-
+			for id, state := range input.SuspendedElevators {
+				if state.IsSuspended {
 					delete(input.States, id)
 					fmt.Printf("Deleted elevatorstate: %s\n", id)
 				}
@@ -104,6 +103,7 @@ func ManageOrders(OrdersCh chan HRAInput, AssignmentsCh chan map[string][N_FLOOR
 
 			if len(input.States) == 0 {
 				fmt.Printf("No input states provided to ordermanager, skipping.\n")
+				AssignmentsCh <- make(map[string][N_FLOORS][2]bool)
 				continue
 			}
 

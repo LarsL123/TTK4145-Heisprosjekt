@@ -5,7 +5,7 @@
 * Det var noe mer viktig, jeg må skru på huet.
 
 ## Hva mangler vi sjef
-* Timeout på orders - check
+* Timeout på orders - check 
 * Obstruction solution - check
 * Resend Assignments - check
 * Backup -

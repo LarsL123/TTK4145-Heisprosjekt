@@ -126,6 +126,7 @@ func (m *Master) runLoop() {
 			if m.suspendTimedOutElevators() {
 				m.runReassignment()
 			}
+			m.data.unsuspendElevators()
 		case orderReceived := <-m.receiveElevatorOrdersCh:
 			fmt.Println("Receiving order, sending ack")
 			m.ackOrderCh <- types.OrderAck{UpdateNr: orderReceived.UpdateNr}
@@ -223,6 +224,10 @@ func (d *masterData) clearAssignmentTimestamps(orders []types.Order) {
 
 func (m *Master) suspendTimedOutElevators() bool {
 	// Suspending elevators that have assignments over maxOrderSuspendTime (Could be moved to some other case)
+	if len(m.data.states) <= 1{ // TODO: Might need to change this if m.data.states doesn't get updated when an elevator dies
+		return false
+	}
+	
 	var elevWasSuspended = false
 
 	for floor := range N_FLOORS {

@@ -13,9 +13,9 @@ type Config struct {
 	HeartbeatInterval  time.Duration `json:"heartbeatInterval"`
 	HeartbeatTimeout   time.Duration `json:"heartbeatTimeout"`
 
-	SlaveListenPort      int           `json:"slaveListenPort"`
-	MasterListenPort     int           `json:"masterListenPort"`
-	BackupPort           int           `json:"backupPort"`
+	SlaveListenPort  int `json:"slaveListenPort"`
+	MasterListenPort int `json:"masterListenPort"`
+	BackupPort       int `json:"backupPort"`
 
 	NewBackupTimeoutTime time.Duration `json:"newBackupTimeoutTime"`
 	NewMasterTimeoutTime time.Duration `json:"newMasterTimeoutTime"`
@@ -43,14 +43,14 @@ var defaultValues = Config{
 
 	SlaveListenPort:  15649,
 	MasterListenPort: 15650,
-	BackupPort: 15651,
+	BackupPort:       15651,
 
 	AckRetryRate: 200 * time.Millisecond,
 	AckTimeout:   4 * time.Second,
 
 	ElevatorUpdateRate: 200 * time.Millisecond,
 
-	MaxOrderSuspendTime:    20 * time.Second,
+	MaxOrderSuspendTime:    9 * time.Second,
 	MaxElevatorSuspendTime: 5 * time.Second,
 
 	NewBackupTimeoutTime: 500 * time.Millisecond, //Needs to be bigger than heartbeatinterval

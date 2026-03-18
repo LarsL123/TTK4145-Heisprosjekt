@@ -108,14 +108,12 @@ func (m *Master) Start() {
 }
 
 func (m *Master) runLoop() {
+	suspensionTicker := time.NewTicker(500 * time.Millisecond)
+	defer suspensionTicker.Stop()
 	for {
 		if !m.isMaster {
 			m.drainChannels()
 			continue
-		}
-
-		if m.suspendTimedOutElevators() {
-			m.runReassignment()
 		}
 
 		select {
@@ -124,6 +122,10 @@ func (m *Master) runLoop() {
 				m.pushOrdersToNewMaster()
 			}
 
+		case <-suspensionTicker.C:
+			if m.suspendTimedOutElevators() {
+				m.runReassignment()
+			}
 		case orderReceived := <-m.receiveElevatorOrdersCh:
 			fmt.Println("Receiving order, sending ack")
 			m.ackOrderCh <- types.OrderAck{UpdateNr: orderReceived.UpdateNr}

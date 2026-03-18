@@ -86,7 +86,7 @@ func NewMaster(id string, isMasterCh chan bool, transferMasterOrders chan types.
 	return m
 }
 
-func (m *Master) Start() {
+func (m *Master) Start(masterAliveCh chan struct{}) {
 	go ordermanager.ManageOrders(m.calculateAssignmentsCh, m.rawAssignmentsCh)
 
 	go bcast.Receiver(
@@ -103,11 +103,11 @@ func (m *Master) Start() {
 		m.ackOrderCh,
 	)
 
-	m.runLoop()
+	m.runLoop(masterAliveCh)
 
 }
 
-func (m *Master) runLoop() {
+func (m *Master) runLoop(aliveCh chan struct{}) {
 	suspensionTicker := time.NewTicker(500 * time.Millisecond)
 	defer suspensionTicker.Stop()
 	for {
@@ -132,6 +132,11 @@ func (m *Master) runLoop() {
 			}
 			if m.data.unsuspendElevators() {
 				m.runReassignment()
+			}
+
+			select { // should probably have own ticker if we think they need other ticker rate
+			case aliveCh <- struct{}{}:
+			default:
 			}
 		case orderReceived := <-m.receiveElevatorOrdersCh:
 			fmt.Println("Receiving order, sending ack")

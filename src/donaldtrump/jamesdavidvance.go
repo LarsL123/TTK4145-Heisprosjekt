@@ -10,9 +10,10 @@ import (
 	"time"
 )
 
-func RunSlaveBrain(id string, transferDeadMaster chan types.Order) {
+func RunSlaveBrain(id string, transferDeadMaster chan types.Order,aliveCh chan struct{}) {
 	var messageCount int = 0
 	var slaveRequests [N_FLOORS][N_BUTTONS]bool
+
 
 	// Channels
 	receiveOrdersCh := make(chan types.Order)
@@ -49,7 +50,7 @@ func RunSlaveBrain(id string, transferDeadMaster chan types.Order) {
 	for {
 		select {
 
-		case order := <-transferDeadMaster:
+		case order := <- transferDeadMaster:
 			receiveOrdersCh <- order
 
 		case state := <-receiveElevatorState:
@@ -76,7 +77,11 @@ func RunSlaveBrain(id string, transferDeadMaster chan types.Order) {
 				fmt.Println("Resending Assignment: ", updateNr)
 				sendFinishedAssignmentsCh <- ho
 			}
-
+		
+			select{
+			case aliveCh <- struct{}{}:
+			default:
+			}
 		case ack := <-hallOrderAck:
 			fmt.Println("Recived ACK for order", ack.UpdateNr)
 			delete(pendingOrders, ack.UpdateNr)

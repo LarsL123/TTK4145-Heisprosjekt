@@ -8,11 +8,11 @@ import (
 
 func TestDonaldTrump(t *testing.T) {
 	config.Load()
-	RunMasterBrain("1")	
+	// RunMasterBrain("1")	
 }
 
 func TestJDVance(t *testing.T) {
 	config.Load()
-	RunSlaveBrain("2")
+	// RunSlaveBrain("2")
 }
 

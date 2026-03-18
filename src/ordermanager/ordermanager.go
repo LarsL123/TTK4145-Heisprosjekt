@@ -90,8 +90,15 @@ func ManageOrders(OrdersCh chan HRAInput, AssignmentsCh chan map[string][4][2]bo
 
 		for id, suspended := range input.SuspendedElevators {
 			if suspended.IsSuspended {
+
 				delete(input.States, id)
+				fmt.Printf("Deleted elevatorstate: %s\n", id)
 			}
+		}
+
+		if len(input.States) == 0 {
+			fmt.Printf("No input states provided to ordermanager, skipping.\n")
+			continue
 		}
 
 		// JSON -> String

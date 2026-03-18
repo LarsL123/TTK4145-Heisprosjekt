@@ -182,7 +182,7 @@ func (m *Master) runLoop() {
 						IsSuspended: false,
 						TimeStamp:   time.Now(),
 					}
-					m.calculateAssignmentsCh <- ordermanager.ToHRAInput(m.data.hallRequests, m.data.cabRequests, m.data.states, m.data.suspendedElevators)
+
 				}
 			}
 
@@ -208,6 +208,9 @@ func (m *Master) runLoop() {
 						}
 						m.data.suspendedElevators[currentElevId] = tempState.Suspended
 						fmt.Printf("Suspended elevator: %s\n", currentElevId)
+
+						//Recalculating orders
+						m.calculateAssignmentsCh <- ordermanager.ToHRAInput(m.data.hallRequests, m.data.cabRequests, m.data.states, m.data.suspendedElevators)
 					}
 				}
 			}

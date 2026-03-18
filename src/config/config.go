@@ -35,7 +35,7 @@ var Cfg Config
 var defaultValues = Config{
 	HeartbeatPort:      15647,
 	HeartbeatReplyPort: 15648,
-	HeartbeatInterval:  15 * time.Millisecond,  //Change to 15ms
+	HeartbeatInterval:  50 * time.Millisecond,  //Change to 15ms
 	HeartbeatTimeout:   500 * time.Millisecond, //Change to 500ms
 
 	SlaveListenPort:  15649,
@@ -44,7 +44,7 @@ var defaultValues = Config{
 	AckRetryRate: 200 * time.Millisecond,
 	AckTimeout:   4 * time.Second,
 
-	ElevatorUpdateRate: 2 * time.Second,
+	ElevatorUpdateRate: 200 * time.Millisecond,
 
 	MaxOrderSuspendTime:    20 * time.Second,
 	MaxElevatorSuspendTime: 15 * time.Second,

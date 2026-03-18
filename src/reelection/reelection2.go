@@ -18,8 +18,8 @@ func ReelectionFSM(selfID string, isMasterCh chan bool) {
 
 	role := network.Slave
 
-	masterTimer := time.NewTimer(config.Cfg.NewMasterTimeoutTime) // TODO: Add to config
-	backupTimer := time.NewTimer(config.Cfg.NewBackupTimeoutTime)
+	masterTimer := time.NewTicker(config.Cfg.NewMasterTimeoutTime) // TODO: Add to config
+	backupTimer := time.NewTicker(config.Cfg.NewBackupTimeoutTime)
 
 	// Setting up heartbeat
 	heartbeatTicker := time.NewTicker(config.Cfg.HeartbeatInterval)

@@ -58,8 +58,10 @@ func NewMaster(id string, isMasterCh chan bool) *Master {
 
 		data: masterData{
 			//hallRequests: [N_FLOORS][2]bool{{false, false}, {false, false}, {false, false}, {false, false}},
-			states:      make(map[string]types.ElevatorState),
-			cabRequests: make(map[string][N_FLOORS]bool),
+			states:             make(map[string]types.ElevatorState),
+			cabRequests:        make(map[string][N_FLOORS]bool),
+			suspendedElevators: make(map[string]types.SuspendedType),
+
 			//timeSinceAssignmentUpdate: [N_FLOORS][2]types.AssignedToAtTime, //TODO - Trenger vi denne? idk, den blir default assigned til "" og jesu fødsel, så i guess det går fint
 		},
 

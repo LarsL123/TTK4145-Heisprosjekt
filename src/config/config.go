@@ -47,7 +47,7 @@ var defaultValues = Config{
 	ElevatorUpdateRate: 200 * time.Millisecond,
 
 	MaxOrderSuspendTime:    20 * time.Second,
-	MaxElevatorSuspendTime: 15 * time.Second,
+	MaxElevatorSuspendTime: 5 * time.Second,
 
 	NewBackupTimeoutTime: 500 * time.Millisecond, //Needs to be bigger than heartbeatinterval
 	NewMasterTimeoutTime: 500 * time.Millisecond,

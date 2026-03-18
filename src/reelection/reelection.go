@@ -36,8 +36,8 @@ func ReelectionFSM(selfID string, isMasterCh chan bool) {
 	go bcast.Receiver(config.Cfg.HeartbeatPort, heartbeatCh)
 
 	startRole := func(r Role) {
-		isMasterCh <- false //Er dette feil sjef??
-
+		isMasterCh <- false //Er dette feil sjef?? Ja dette er en bug, kan ende opp med å blocke channels....
+		
 		role = r
 
 		switch r {

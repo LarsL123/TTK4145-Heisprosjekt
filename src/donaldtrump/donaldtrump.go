@@ -207,7 +207,13 @@ func (m *Master) updateAssignmentTimestamps(assignments map[string][N_FLOORS][2]
 }
 
 func (m *Master) runReassignment() {
-	m.calculateAssignmentsCh <- ordermanager.ToHRAInput(m.data.hallRequests, m.data.cabRequests, m.data.states, m.data.suspendedElevators)
+	input := ordermanager.ToHRAInput(m.data.hallRequests, m.data.cabRequests, m.data.states, m.data.suspendedElevators)
+	select {
+	case m.calculateAssignmentsCh <- input:
+	default:
+		//HRA is busy - resend ticker will fix
+	}
+
 }
 
 func (d *masterData) clearAssignmentTimestamps(orders []types.Order) {
@@ -224,10 +230,10 @@ func (d *masterData) clearAssignmentTimestamps(orders []types.Order) {
 
 func (m *Master) suspendTimedOutElevators() bool {
 	// Suspending elevators that have assignments over maxOrderSuspendTime (Could be moved to some other case)
-	if len(m.data.states) <= 1{ // TODO: Might need to change this if m.data.states doesn't get updated when an elevator dies
+	if len(m.data.states) <= 1 { // TODO: Might need to change this if m.data.states doesn't get updated when an elevator dies
 		return false
 	}
-	
+
 	var elevWasSuspended = false
 
 	for floor := range N_FLOORS {
@@ -317,6 +323,6 @@ func (m *Master) drainChannels() {
 	case <-m.completedAssignmentCh:
 	case <-m.rawAssignmentsCh:
 	case <-m.updateStreamCh:
-	default:
+		// default: no default, this might be a bug
 	}
 }

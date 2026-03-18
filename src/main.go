@@ -17,12 +17,12 @@ func main() {
 	flag.StringVar(&id, "id", "", "id of this elevator")
 	flag.Parse()
 
-	isMaster := make(chan bool)
+	isMasterCh := make(chan bool,1)
 	forwardOrders := make(chan types.Order)
 
-	master := donaldtrump.NewMaster(id, isMaster, forwardOrders)
+	master := donaldtrump.NewMaster(id, isMasterCh, forwardOrders)
 	go master.Start()
-	go reelection.ReelectionFSM(id, isMaster)
+	go reelection.ReelectionFSM(id, isMasterCh)
 	//go donaldtrump.RunBackup(isMaster, forwardOrders) //TODO: fix this, has to be commented out as long as backup doesn't work
 	go donaldtrump.RunSlaveBrain(id, forwardOrders)
 

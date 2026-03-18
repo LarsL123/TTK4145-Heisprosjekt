@@ -1,12 +1,16 @@
 ## Notater
 
+### Ok heftig sjef, dette er spørsmål til studass siste timen:
+* Kan man bare ha fuckton buffers på kanaler?
+* Det var noe mer viktig, jeg må skru på huet.
+
 ## Hva mangler vi sjef
-* Timeout på orders
-* Obstruction solution
-* Resend Assignments 
-* Backup
-* Reconfiguratiom etter at en heis ble koblet fra (huske gamle caborders)
-* Process pair
+* Timeout på orders - check
+* Obstruction solution - check
+* Resend Assignments -
+* Backup -
+* Reconfiguratiom etter at en heis ble koblet fra (huske gamle caborders) 
+* Process pair - 
 
 Testing:
 * Packet loss

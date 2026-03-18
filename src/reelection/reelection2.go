@@ -18,8 +18,8 @@ func ReelectionFSM(selfID string, isMasterCh chan bool) {
 
 	role := network.Slave
 
-	masterTicker := time.NewTicker(2 * time.Second)
-	backupTicker := time.NewTicker(2 * time.Second)
+	masterTimer := time.NewTimer(config.Cfg.NewMasterTimeoutTime) // TODO: Add to config
+	backupTimer := time.NewTimer(config.Cfg.NewBackupTimeoutTime)
 
 	// Setting up heartbeat
 	heartbeatTicker := time.NewTicker(config.Cfg.HeartbeatInterval)
@@ -59,7 +59,7 @@ func ReelectionFSM(selfID string, isMasterCh chan bool) {
 
 			switch hb.Role {
 			case network.Master:
-				masterTicker.Reset(2 * time.Second)
+				masterTimer.Reset(config.Cfg.NewMasterTimeoutTime)
 
 				if role == network.Master {
 					if hb.ID > selfID {
@@ -69,7 +69,7 @@ func ReelectionFSM(selfID string, isMasterCh chan bool) {
 				}
 
 			case network.Backup:
-				backupTicker.Reset(2 * time.Second)
+				backupTimer.Reset(config.Cfg.NewBackupTimeoutTime)
 
 				if role == network.Backup {
 					if hb.ID > selfID {
@@ -79,13 +79,13 @@ func ReelectionFSM(selfID string, isMasterCh chan bool) {
 				}
 			}
 
-		case <-masterTicker.C:
+		case <-masterTimer.C:
 			if role == network.Backup {
 				fmt.Println("Master dead → becoming master")
 				startRole(network.Master)
 			}
 
-		case <-backupTicker.C:
+		case <-backupTimer.C:
 			if role == network.Slave {
 				fmt.Println("No backup → becoming backup")
 				startRole(network.Backup)

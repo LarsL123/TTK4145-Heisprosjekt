@@ -13,16 +13,19 @@ type Config struct {
 	HeartbeatInterval  time.Duration `json:"heartbeatInterval"`
 	HeartbeatTimeout   time.Duration `json:"heartbeatTimeout"`
 
-	SlaveListenPort  int `json:"slaveListenPort"`
-	MasterListenPort int `json:"masterListenPort"`
+	SlaveListenPort      int           `json:"slaveListenPort"`
+	MasterListenPort     int           `json:"masterListenPort"`
+	NewBackupTimeoutTime time.Duration `json:"newBackupTimeoutTime"`
+	NewMasterTimeoutTime time.Duration `json:"newMasterTimeoutTime"`
 
 	AckRetryRate time.Duration `json:"ackRetryRateMs"`
 	AckTimeout   time.Duration `json:"ackTimeout"`
 
 	ElevatorUpdateRate time.Duration `json:"elevatorUpdateRate"`
 
-	MaxOrderSuspendTime time.Duration `json:"maxOrderSuspendTime"`
+	MaxOrderSuspendTime    time.Duration `json:"maxOrderSuspendTime"`
 	MaxElevatorSuspendTime time.Duration `json:"maxElevatorSuspendTime"`
+
 	// N_FLOORS int `json:"nFloors"`
 	// N_BUTTONS int `json:"nButtons"` //TODO: Er dette forksjellige i elevatorManager og orderManager? Isåfall hva gjør man?
 }
@@ -32,8 +35,8 @@ var Cfg Config
 var defaultValues = Config{
 	HeartbeatPort:      15647,
 	HeartbeatReplyPort: 15648,
-	HeartbeatInterval:  1000 * time.Millisecond, //Change to 15ms
-	HeartbeatTimeout:   2000 * time.Millisecond, //Change to 500ms
+	HeartbeatInterval:  15 * time.Millisecond,  //Change to 15ms
+	HeartbeatTimeout:   500 * time.Millisecond, //Change to 500ms
 
 	SlaveListenPort:  15649,
 	MasterListenPort: 15650,
@@ -43,8 +46,11 @@ var defaultValues = Config{
 
 	ElevatorUpdateRate: 2 * time.Second,
 
-	MaxOrderSuspendTime: 20*time.Second,
-	MaxElevatorSuspendTime: 15*time.Second,
+	MaxOrderSuspendTime:    20 * time.Second,
+	MaxElevatorSuspendTime: 15 * time.Second,
+
+	NewBackupTimeoutTime: 500 * time.Millisecond, //Needs to be bigger than heartbeatinterval
+	NewMasterTimeoutTime: 500 * time.Millisecond,
 }
 
 // Load returns the config, falling back to defaults

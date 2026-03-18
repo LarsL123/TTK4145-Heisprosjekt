@@ -83,7 +83,6 @@ func ManageOrders(OrdersCh chan HRAInput, AssignmentsCh chan map[string][4][2]bo
 	}
 
 	for {
-
 		// Order is received on input channel
 		input := <-OrdersCh
 		fmt.Println("Calculating orders")

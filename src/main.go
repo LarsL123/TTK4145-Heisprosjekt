@@ -8,12 +8,6 @@ import (
 	"flag"
 )
 
-// TODO: (slik jeg (Daniel) ser det nå (natt til mandag 16.03))
-// 1. Få til kommunikasjonen mellom slaves og master
-// 2. Etter det må vi få til initialiseringen, noe jeg tror vi har glemt litt
-// 3. Dukker sikkert opp noe mer vi har glemt
-// 4. Rename Donald Trump og James David Vance
-
 func main() {
 	config.Load()
 
@@ -29,7 +23,7 @@ func main() {
 	master := donaldtrump.NewMaster(id, isMaster, forwardOrders)
 	go master.Start()
 	go reelection.ReelectionFSM(id, isMaster)
-	// go donaldtrump.RunBackup(forwardOrders)
+	// go donaldtrump.RunBackup(forwardOrders) //TODO
 	go donaldtrump.RunSlaveBrain(id, forwardOrders)
 
 	select {}

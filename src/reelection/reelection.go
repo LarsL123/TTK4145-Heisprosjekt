@@ -1,259 +1,108 @@
 package reelection
 
-// ---
-// Use the goroutine below to setup the FSM in all elevators.
-// From there, all reelection logic is handled internally inside the FSM.
-//
-// go InitReelection(selfID)
-//
-// The FSM is fully agnostic to other elevators states, and state changes are
-// fully dependent on if heartbeats from either master or backup arrives in time.
-//
-// The idea is to always ensure one master and one backup is alive.
-// ---
-
 import (
-	"Network-go/network/bcast"
-	"context"
-	"elevatorproject/src/config"
-	"elevatorproject/src/network"
 	"fmt"
-	"math/rand"
-	"strconv"
 	"time"
-	// "golang.org/x/text/cases"
-	// "golang.org/x/sys/windows/registry"
+
+	"Network-go/network/bcast"
+	"elevatorproject/src/config"
 )
 
-// A FSM running goroutines based on current role
-func InitReelection(selfId string) {
+type Role int
 
-	heartbeatCh := make(chan network.Heartbeat)
-	masterHearbeatCh := make(chan string, 10) // Buffered? Check
-	backupHeartbeatCh := make(chan string, 10) // Buffered? Check
-	roleCh := make(chan network.Role, 1) // Should only be one role at a time
+const (
+	Slave  Role = 0
+	Backup Role = 1
+	Master Role = 2
+)
 
-	// Receives and splits heartbeats based on role into separate channels
+type Heartbeat struct {
+	ID   string
+	Role Role 
+}
+
+func ReelectionFSM(selfID string, isMasterCh chan bool) {
+
+	role := Slave
+
+	masterTimer := time.NewTicker(config.Cfg.NewMasterTimeoutTime)
+	backupTimer := time.NewTicker(config.Cfg.NewBackupTimeoutTime)
+
+	// Setting up heartbeat
+	heartbeatTicker := time.NewTicker(config.Cfg.HeartbeatInterval)
+	sendHeartbeatCh := make(chan Heartbeat)
+	go bcast.Transmitter(config.Cfg.HeartbeatPort, sendHeartbeatCh)
+	heartbeatCh := make(chan Heartbeat, 32)
 	go bcast.Receiver(config.Cfg.HeartbeatPort, heartbeatCh)
-	go SplitHeartbeats(selfId,heartbeatCh, masterHearbeatCh, backupHeartbeatCh)
 
-	// To allow goroutine killing
-	var cancel context.CancelFunc
+	startRole := func(r Role) {
+		isMasterCh <- false //Er dette feil sjef??
 
-	roleCh <- network.Slave
+		role = r
 
-	for role := range roleCh {
-		if cancel != nil {
-            cancel()
-        }
+		switch r {
+		case Master:
+			fmt.Println("I am master:", selfID)
+			isMasterCh <- true
 
-		// To allow goroutine killing
-		ctx, newCancel := context.WithCancel(context.Background())
-		cancel = newCancel
+		case Backup:
+			fmt.Println("I am backup:", selfID)
 
-		switch role {
-
-		case network.Master:
-			fmt.Println("I am master:  ", selfId)
-			// currentRoleCh <-currentRole
-			go DetectMasterConflict(selfId, masterHearbeatCh, roleCh, cancel)
-			network.StartMaster(selfId, ctx)
-
-		case network.Backup:
-			fmt.Println("I am backup:  ", selfId)
-			go DetectBackupConflict(selfId, backupHeartbeatCh, roleCh, ctx, cancel)
-			go BackupSelfElectMaster(selfId, masterHearbeatCh, roleCh, ctx, cancel)
-			network.StartBackup(selfId, ctx)
-		
-		case network.Slave:
-			fmt.Println("I am slave:  ", selfId)
-			go SlaveSelfElectBackup(selfId, backupHeartbeatCh, roleCh)
-		}
-	}
-}
-
-
-// Split heartbeats into separte channels, only containing their IDs
-func SplitHeartbeats(selfID string, heartbeatCh chan network.Heartbeat, masterHeartbeatCh chan string, backupHeartbeatCh chan string) {
-
-	for heartbeat := range heartbeatCh {
-
-		if heartbeat.ID == selfID {
-			continue
-		}
-
-		switch heartbeat.Role {
-
-		case network.Master:
-			masterHeartbeatCh <- heartbeat.ID
-
-		case network.Backup:
-			backupHeartbeatCh <- heartbeat.ID
+		case Slave:
+			fmt.Println("I am slave:", selfID)
 		}
 	}
 
-	// for {
-	// 	heartbeat := <- heartbeatCh
-		
-	// 	if (heartbeat.Role == network.Master) {
-	// 		if(heartbeat.ID != selfID){
-	// 			fmt.Println("Master heartbeat: ", heartbeat.ID, heartbeat.Role)
-	// 			masterHeartbeatCh <- heartbeat.ID
-	// 		}
-	// 	}
-
-	// 	if (heartbeat.Role == network.Backup) {
-	// 		if(heartbeat.ID != selfID){
-	// 			// fmt.Println("YAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
-	// 			fmt.Println("Backup heartbeat: ", heartbeat.ID, heartbeat.Role)
-	// 			backupHeartbeatCh <- heartbeat.ID
-	// 		}
-	// 	}
-	// }
-}
-
-// If another masters exists, set self to slave
-func DetectMasterConflict(selfID string, masterHeartbeatCh chan string, roleCh chan network.Role, cancel context.CancelFunc) {
-	// prevMasterID := ""
-
-	//Daniel sjef hva skal denne sleep tiden være? Er litt cursed men funker som faen. 
-	id, _ := strconv.Atoi(selfID)
-	r := rand.New(rand.NewSource(time.Now().UnixNano() + int64(id)))
-	sleep := time.Duration(r.Int63n(int64(time.Second*2))) //TODO change to better number. 
-
-
-	for {
-		<- masterHeartbeatCh
-
-		// Conflict detected -> Suicide
-		fmt.Println("DOUBLE MASTER DETECTED!!! -> Suicide ")
-		cancel()
-		time.Sleep(sleep)
-		roleCh <- network.Slave
-		return
-	}
-}
-
-// If more backups exists, set self to slave
-func DetectBackupConflict(selfID string, backupHeartbeatCh chan string, roleCh chan network.Role,  ctx context.Context, cancel context.CancelFunc) {
-	
-	//Daniel sjef hva skal denne sleep tiden være? Er litt cursed men funker som faen. 
-	id, _ := strconv.Atoi(selfID)
-	r := rand.New(rand.NewSource(time.Now().UnixNano() + int64(id)))
-	sleep := time.Duration(r.Int63n(int64(time.Second*2))) //TODO change to better number. time.Second*2
-
-	for {
-		select{
-
-			// Conflict detected -> Suicide and kill goroutine: BackupSelfElectMaster()
-			case <- backupHeartbeatCh: 
-				fmt.Println("DOUBLE BACKUP DETECTED!!! Suicide ")
-				cancel()
-				time.Sleep(sleep)
-				roleCh <- network.Slave
-				return
-
-			// Killed by BackupSelfElectMaster()
-			case <- ctx.Done():
-				return
-		}
-	}
-}
-
-
-// No master exists? Set yourself to master
-func BackupSelfElectMaster(selfID string, masterHeartbeatCh chan string, roleCh chan network.Role,  ctx context.Context, cancel context.CancelFunc) {
-	
-	for {
-		select {
-		// Heartbeat received -> reset timer
-		case <- masterHeartbeatCh:
-			fmt.Println("Backup hører at master lever")
-			continue
-			
-		// Timeout -> upgrade
-		case <- time.After(time.Second * 2):
-			fmt.Println("Jeg blir master nå wallah")
-			cancel()
-			roleCh <- network.Master
-			return 	
-
-		case <- ctx.Done():
-			return
-		}
-	}	
-}
-
-// No backup exists? Set yourself to backup
-func SlaveSelfElectBackup(selfID string, backupHeartbeatCh chan string, roleCh chan network.Role) {
-
-	//id, _ := strconv.Atoi(selfID)
-	//r := rand.New(rand.NewSource(time.Now().UnixNano() + int64(id)))
-	//  sleep := time.Duration(r.Int63n(int64(time.Second*2))) //TODO change to better number. time.Second*2
+	startRole(Slave)
 
 	for {
 		select {
-			// Heartbeat received -> reset timer
-			case <- backupHeartbeatCh:
-				fmt.Println("Slave hører at backup lever")
+
+		case hb := <-heartbeatCh:
+
+			if hb.ID == selfID {
 				continue
-			
-			// Timeout -> upgrade
-			case <- time.After(time.Second * 2): // config.Cfg.HeartbeatTimeout, time.Second * 2
-				fmt.Println("Jeb blir backup nå wallah")
-				roleCh <- network.Backup
-				return
-		}
-	}
-}
+			}
 
+			switch hb.Role {
+			case Master:
+				masterTimer.Reset(config.Cfg.NewMasterTimeoutTime)
 
-/////////////////////////////////////////////////////////////////////////////////7
-// FOR TESTING ONLY, not part of the main logic
+				if role == Master {
+					if hb.ID > selfID {
+						fmt.Println("Higher ID master detected → stepping down")
+						startRole(Slave)
+					}
+				}
 
-// A fucker coming from the outside claiming the crown, causing chaos in the kingdom
-func ClaimCrown(selfId string) {
+			case Backup:
+				backupTimer.Reset(config.Cfg.NewBackupTimeoutTime)
 
-	heartbeatCh := make(chan network.Heartbeat)
-	masterHearbeatCh := make(chan string) // Buffered? Check
-	backupHeartbeatCh := make(chan string, 4) // Buffered? Check
-	roleCh := make(chan network.Role, 1) // Should only be one role at a time
+				if role == Backup {
+					if hb.ID > selfID {
+						fmt.Println("Higher ID backup detected → stepping down")
+						startRole(Slave)
+					}
+				}
+			}
 
-	// Receives and splits heartbeats based on role into separate channels
-	go bcast.Receiver(config.Cfg.HeartbeatPort, heartbeatCh)
-	go SplitHeartbeats(selfId,heartbeatCh, masterHearbeatCh, backupHeartbeatCh)
+		case <-masterTimer.C:
+			if role == Backup {
+				fmt.Println("Master dead → becoming master")
+				startRole(Master)
+			}
 
-	// To allow goroutine killing
-	var cancel context.CancelFunc
+		case <-backupTimer.C:
+			if role == Slave {
+				fmt.Println("No backup → becoming backup")
+				startRole(Backup)
+			}
 
-	roleCh <- network.Master
+		case <-heartbeatTicker.C:
+			if role != Slave {
+				sendHeartbeatCh <- Heartbeat{ID: selfID, Role: role}
+			}
 
-	for role := range roleCh {
-		if cancel != nil {
-            cancel()
-        }
-
-		// To allow goroutine killing
-		ctx, newCancel := context.WithCancel(context.Background())
-		cancel = newCancel
-
-		switch role {
-
-		case network.Master:
-			fmt.Println("I am master:  ", selfId)
-			// currentRoleCh <-currentRole
-			go DetectMasterConflict(selfId, masterHearbeatCh, roleCh, cancel)
-			network.StartMaster(selfId, ctx)
-
-		case network.Backup:
-			fmt.Println("I am backup:  ", selfId)
-			go DetectBackupConflict(selfId, backupHeartbeatCh, roleCh, ctx, cancel)
-			go BackupSelfElectMaster(selfId, masterHearbeatCh, roleCh, ctx, cancel)
-			network.StartBackup(selfId, ctx)
-		
-		case network.Slave:
-			fmt.Println("I am slave:  ", selfId)
-			go SlaveSelfElectBackup(selfId, backupHeartbeatCh, roleCh)
 		}
 	}
 }

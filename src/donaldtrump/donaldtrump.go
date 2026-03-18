@@ -120,13 +120,19 @@ func (m *Master) runLoop() {
 		case m.isMaster = <-m.isMasterCh:
 			if m.isMaster == false { //May be redundant.
 				m.pushOrdersToNewMaster()
+			} else {
+				m.data.suspendedElevators = make(map[string]types.SuspendedType)
+				m.data.timeSinceAssignmentUpdate = [N_FLOORS][2]types.AssignedToAtTime{}
+				m.runReassignment()
 			}
 
 		case <-suspensionTicker.C:
 			if m.suspendTimedOutElevators() {
 				m.runReassignment()
 			}
-			m.data.unsuspendElevators()
+			if m.data.unsuspendElevators() {
+				m.runReassignment()
+			}
 		case orderReceived := <-m.receiveElevatorOrdersCh:
 			fmt.Println("Receiving order, sending ack")
 			m.ackOrderCh <- types.OrderAck{UpdateNr: orderReceived.UpdateNr}
@@ -161,15 +167,18 @@ func (m *Master) runLoop() {
 	}
 }
 
-func (d *masterData) unsuspendElevators() {
+func (d *masterData) unsuspendElevators() bool {
+	changed := false
 	for id, suspend := range d.suspendedElevators {
 		if suspend.IsSuspended && time.Since(suspend.TimeStamp) > config.Cfg.MaxElevatorSuspendTime {
 			d.suspendedElevators[id] = types.SuspendedType{
 				IsSuspended: false,
 				TimeStamp:   time.Now(),
 			}
+			changed = true
 		}
 	}
+	return changed
 }
 
 func (m *Master) mergeAssignmentsWithCabRequests(rawAssignments map[string][N_FLOORS][2]bool) map[string][N_FLOORS][N_BUTTONS]bool {

@@ -44,11 +44,12 @@ type HRAElevState struct {
 }
 
 type HRAInput struct {
-	HallRequests [4][2]bool              `json:"hallRequests"`
-	States       map[string]HRAElevState `json:"states"`
+	HallRequests       [4][2]bool              `json:"hallRequests"`
+	States             map[string]HRAElevState `json:"states"`
+	SuspendedElevators map[string]types.SuspendedType
 }
 
-func ToHRAInput(hallRequests [4][2]bool, cabRequests map[string][4]bool, elevatorStates map[string]types.ElevatorState) HRAInput {
+func ToHRAInput(hallRequests [4][2]bool, cabRequests map[string][4]bool, elevatorStates map[string]types.ElevatorState, suspendedElevators map[string]types.SuspendedType) HRAInput {
 
 	inputStates := make(map[string]HRAElevState)
 
@@ -62,8 +63,9 @@ func ToHRAInput(hallRequests [4][2]bool, cabRequests map[string][4]bool, elevato
 	}
 
 	return HRAInput{
-		HallRequests: hallRequests,
-		States:       inputStates,
+		HallRequests:       hallRequests,
+		States:             inputStates,
+		SuspendedElevators: suspendedElevators,
 	}
 }
 
@@ -85,6 +87,12 @@ func ManageOrders(OrdersCh chan HRAInput, AssignmentsCh chan map[string][4][2]bo
 		// Order is received on input channel
 		input := <-OrdersCh
 		fmt.Println("Calculating orders")
+
+		for id, suspended := range input.SuspendedElevators {
+			if suspended.IsSuspended {
+				delete(input.States, id)
+			}
+		}
 
 		// JSON -> String
 		jsonBytes, err := json.Marshal(input)

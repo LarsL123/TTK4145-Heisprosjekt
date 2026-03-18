@@ -44,7 +44,7 @@ var defaultValues = Config{
 	ElevatorUpdateRate: 2 * time.Second,
 
 	MaxOrderSuspendTime: 20*time.Second,
-	MaxElevatorSuspendTime: 20*time.Second,
+	MaxElevatorSuspendTime: 15*time.Second,
 }
 
 // Load returns the config, falling back to defaults

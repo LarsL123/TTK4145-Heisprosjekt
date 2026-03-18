@@ -209,7 +209,7 @@ func (m *Master) runLoop() {
 						m.data.suspendedElevators[currentElevId] = tempState.Suspended
 						fmt.Printf("Suspended elevator: %s\n", currentElevId)
 
-						//Recalculating orders
+						//Recalculating orders need to fix that the timer gets reset on the assignment so that the elevator doesn't get suspended all the fucking time (Should be fine if another elevator takes the order.)
 						m.calculateAssignmentsCh <- ordermanager.ToHRAInput(m.data.hallRequests, m.data.cabRequests, m.data.states, m.data.suspendedElevators)
 					}
 				}

@@ -23,8 +23,9 @@ func main() {
 	flag.Parse()
 
 	isMaster := make(chan bool)
+	master := donaldtrump.NewMaster(id, isMaster)
+	go master.Start()
 
-	go donaldtrump.RunMasterBrain(id, isMaster)
 	go reelection.ReelectionFSM(id, isMaster)
 	go donaldtrump.RunSlaveBrain(id)
 

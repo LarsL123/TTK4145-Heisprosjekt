@@ -69,18 +69,8 @@ const (
 	Cab      OrderType = 2
 )
 
-type Order struct {
-	Floor int
-	Type  OrderType
-}
-
-type AssignedToAtTime struct {
-	ElevatorId string
-	TimeStamp  time.Time
-}
-
-func OrderTypeToString(ordertype OrderType) string {
-	switch ordertype {
+func (orderType OrderType) ToString() string {
+	switch orderType {
 	case HallDown:
 		return "HallDown"
 	case HallUp:
@@ -91,3 +81,15 @@ func OrderTypeToString(ordertype OrderType) string {
 		return "Invalid OrderType"
 	}
 }
+
+type Order struct {
+	Floor int
+	Type  OrderType
+}
+
+type AssignedToAtTime struct {
+	ElevatorId string
+	TimeStamp  time.Time
+}
+
+

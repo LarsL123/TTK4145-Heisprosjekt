@@ -173,6 +173,24 @@ func (m *Master) runLoop() {
 				assignmentOut[id] = arr
 			}
 
+			// Unsuspending elevators:
+			for id, suspend := range m.data.suspendedElevators {
+				if suspend.IsSuspended && time.Since(suspend.TimeStamp) > config.Cfg.MaxElevatorSuspendTime {
+					m.data.suspendedElevators[id] = types.SuspendedType{
+						IsSuspended: false,
+						TimeStamp:   time.Now(),
+					}
+					m.calculateAssignmentsCh <- ordermanager.ToHRAInput(m.data.hallRequests, m.data.cabRequests, m.data.states, m.data.suspendedElevators)
+				}
+			}
+
+			m.sendAssignmentsCh <- types.Assignments{Assignments: assignmentOut}
+
+		case elevatorData := <-m.updateStreamCh:
+			if elevatorData.Floor == -1 {
+				continue
+			}
+
 			// Suspending elevators that have assignments over maxOrderSuspendTime (Could be moved to some other case)
 			for floor := range N_FLOORS {
 				for orderType := range 2 {
@@ -190,24 +208,6 @@ func (m *Master) runLoop() {
 						fmt.Printf("Suspended elevator: %s\n", currentElevId)
 					}
 				}
-			}
-
-			// Unsuspending elevators:
-			for id, suspend := range m.data.suspendedElevators {
-				if suspend.IsSuspended && time.Since(suspend.TimeStamp) > config.Cfg.MaxElevatorSuspendTime {
-					m.data.suspendedElevators[id] = types.SuspendedType{
-						IsSuspended: false,
-						TimeStamp:   time.Now(),
-					}
-					m.calculateAssignmentsCh <- ordermanager.ToHRAInput(m.data.hallRequests, m.data.cabRequests, m.data.states, m.data.suspendedElevators)
-				}
-			}
-
-			m.sendAssignmentsCh <- types.Assignments{Assignments: assignmentOut}
-
-		case elevatorData := <-m.updateStreamCh:
-			if elevatorData.Floor == -1 {
-				continue
 			}
 
 			m.data.states[elevatorData.ID] = elevatorData

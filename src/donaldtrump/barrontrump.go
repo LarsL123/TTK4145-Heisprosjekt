@@ -1,16 +1,12 @@
 package donaldtrump
 
-import "elevatorproject/src/types"
+//  func RunBackup(){
 
-func RunBackup(){
+//  	var data types.BackupData
 
-	var data types.BackupData
+// 	for {
+// 		switch {
 
-
-	for{
-		switch {
-			
-
-		}
-	}
-}
+// 		}
+// 	}
+// }

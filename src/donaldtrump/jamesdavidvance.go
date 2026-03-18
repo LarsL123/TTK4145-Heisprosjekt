@@ -10,10 +10,10 @@ import (
 	"time"
 )
 
-func RunSlaveBrain(id string) {
+func RunSlaveBrain(id string, transferDeadMaster chan types.Order) {
 	var messageCount int = 0
 	var slaveRequests [N_FLOORS][N_BUTTONS]bool
-	
+
 
 	// Channels
 	receiveOrdersCh := make(chan types.Order)
@@ -49,6 +49,9 @@ func RunSlaveBrain(id string) {
 
 	for {
 		select {
+
+		case order := <- transferDeadMaster:
+			receiveOrdersCh <- order
 
 		case state := <-receiveElevatorState:
 			state.ID = id

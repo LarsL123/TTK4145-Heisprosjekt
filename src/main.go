@@ -4,6 +4,7 @@ import (
 	"elevatorproject/src/config"
 	"elevatorproject/src/donaldtrump"
 	"elevatorproject/src/reelection"
+	"elevatorproject/src/types"
 	"flag"
 )
 
@@ -23,13 +24,13 @@ func main() {
 	flag.Parse()
 
 	isMaster := make(chan bool)
-	// dataFromBackup := make(chan types.BackupData)
+	forwardOrders := make(chan types.Order)
 
-	master := donaldtrump.NewMaster(id, isMaster)
+	master := donaldtrump.NewMaster(id, isMaster, forwardOrders)
 	go master.Start()
-
 	go reelection.ReelectionFSM(id, isMaster)
-	go donaldtrump.RunSlaveBrain(id)
+	// go donaldtrump.RunBackup(forwardOrders)
+	go donaldtrump.RunSlaveBrain(id, forwardOrders)
 
 	select {}
 }

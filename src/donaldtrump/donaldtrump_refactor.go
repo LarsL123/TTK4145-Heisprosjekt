@@ -29,6 +29,7 @@ type Master struct {
 
 	// Channels
 	isMasterCh chan bool
+	transferOrders chan types.Order
 
 	calculateAssignmentsCh chan ordermanager.HRAInput
 	rawAssignmentsCh       chan map[string][N_FLOORS][2]bool
@@ -50,7 +51,7 @@ type masterData struct {
 	suspendedElevators        map[string]types.SuspendedType
 }
 
-func NewMaster(id string, isMasterCh chan bool) *Master {
+func NewMaster(id string, isMasterCh chan bool, transferMasterOrders chan types.Order) *Master {
 	m := &Master{
 		id:         id,
 		isMasterCh: isMasterCh,
@@ -64,6 +65,8 @@ func NewMaster(id string, isMasterCh chan bool) *Master {
 
 			//timeSinceAssignmentUpdate: [N_FLOORS][2]types.AssignedToAtTime, //TODO - Trenger vi denne? idk, den blir default assigned til "" og jesu fødsel, så i guess det går fint
 		},
+
+		transferOrders: transferMasterOrders,
 
 		//Order calculation
 		calculateAssignmentsCh: make(chan ordermanager.HRAInput),
@@ -114,6 +117,9 @@ func (m *Master) runLoop() {
 
 		select {
 		case m.isMaster = <-m.isMasterCh:
+			if(m.isMaster == false){ //May be redundant. 
+				m.pushOrdersToNewMaster()
+			}
 
 		case orderReceived := <-m.receiveElevatorOrdersCh:
 			fmt.Println("Receiving order, sending ack")
@@ -218,6 +224,21 @@ func (m *Master) runLoop() {
 			m.data.states[elevatorData.ID] = elevatorData
 			fmt.Println("Received data from: ", elevatorData.ID)
 		}
+	}
+}
+
+func (m *Master) pushOrdersToNewMaster(){
+	for floor := range N_FLOORS{
+		for button := range 2 {
+			if(m.data.hallRequests[floor][button]){
+				m.transferOrders <- types.Order{Floor: floor, Type: types.OrderType(button)}
+			}
+		}
+		hallReq := m.data.cabRequests[m.id]
+		if(hallReq[floor]){
+			m.transferOrders <- types.Order{Floor: floor, Type: types.Cab}
+		}
+
 	}
 }
 

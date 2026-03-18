@@ -28,7 +28,7 @@ type Master struct {
 	data masterData
 
 	// Channels
-	isMasterCh chan bool
+	isMasterCh     chan bool
 	transferOrders chan types.Order
 
 	calculateAssignmentsCh chan ordermanager.HRAInput
@@ -115,9 +115,13 @@ func (m *Master) runLoop() {
 			continue
 		}
 
+		if m.suspendTimedOutElevators(){
+			m.runRassignment()
+		}
+
 		select {
 		case m.isMaster = <-m.isMasterCh:
-			if(m.isMaster == false){ //May be redundant. 
+			if m.isMaster == false { //May be redundant.
 				m.pushOrdersToNewMaster()
 			}
 
@@ -127,34 +131,19 @@ func (m *Master) runLoop() {
 
 			hasChanged := m.data.storeOrder(orderReceived.Order, orderReceived.ElevatorID)
 			if hasChanged {
-				m.calculateAssignmentsCh <- ordermanager.ToHRAInput(m.data.hallRequests, m.data.cabRequests, m.data.states, m.data.suspendedElevators) //Loops back to case
+				m.runRassignment()//Loops back to case
 			}
 
 		case completedAssignments := <-m.completedAssignmentCh:
+			m.ackAssignmentCompletedCh <- types.FinishedHallAssignmentsAck{UpdateNr: completedAssignments.UpdateNr}
 
-			m.ackAssignmentCompletedCh <- types.FinishedHallAssignmentsAck{
-				UpdateNr: completedAssignments.UpdateNr,
-			}
-
-			orders := completedAssignments.Orders
-			dataChanged := m.data.removeOrders(orders, completedAssignments.ElevatorID)
-
-			for _, order := range orders { //TODO: Skrive om til funksjone. Høre Brage og Daniel
-				if order.Type != types.Cab {
-					fmt.Printf("Clearing order: Floor: %d, Dirn: %s Assigned to: %s \n", order.Floor, order.Type.ToString(), m.data.timeSinceAssignmentUpdate[order.Floor][order.Type].ElevatorId)
-					m.data.timeSinceAssignmentUpdate[order.Floor][order.Type] = types.AssignedToAtTime{
-						ElevatorId: "",
-						TimeStamp:  time.Now(),
-					}
-				}
-			}
-
-			if dataChanged {
-				m.calculateAssignmentsCh <- ordermanager.ToHRAInput(m.data.hallRequests, m.data.cabRequests, m.data.states, m.data.suspendedElevators)
+			if m.data.removeOrders(completedAssignments.Orders, completedAssignments.ElevatorID) {
+				m.data.clearAssignmentTimestamps(completedAssignments.Orders)
+				m.runRassignment()
 			}
 
 		case assignments := <-m.rawAssignmentsCh:
-			fmt.Println("Sending back assignment: ")
+
 
 			assignmentOut := make(map[string][N_FLOORS][N_BUTTONS]bool)
 
@@ -195,31 +184,13 @@ func (m *Master) runLoop() {
 			m.sendAssignmentsCh <- types.Assignments{Assignments: assignmentOut}
 
 		case elevatorData := <-m.updateStreamCh:
+			// TODO: if message from suspended elevator, unsuspend if elevatordata != from m.data.states[elevatorid]
+
 			if elevatorData.Floor == -1 {
 				continue
 			}
 
-			// Suspending elevators that have assignments over maxOrderSuspendTime (Could be moved to some other case)
-			for floor := range N_FLOORS {
-				for orderType := range 2 {
-					currentorder := m.data.timeSinceAssignmentUpdate[floor][orderType]
-					if time.Since(currentorder.TimeStamp) > config.Cfg.MaxOrderSuspendTime && currentorder.ElevatorId != "" {
-						// Suspend the correct elevator
-						// suspendElevator(masterData.timeSinceAssignmentUpdate[floor][orderType].ElevatorId)
-						currentElevId := m.data.timeSinceAssignmentUpdate[floor][orderType].ElevatorId
-						tempState := m.data.states[currentElevId]
-						tempState.Suspended = types.SuspendedType{
-							IsSuspended: true,
-							TimeStamp:   time.Now(),
-						}
-						m.data.suspendedElevators[currentElevId] = tempState.Suspended
-						fmt.Printf("Suspended elevator: %s\n", currentElevId)
 
-						//Recalculating orders need to fix that the timer gets reset on the assignment so that the elevator doesn't get suspended all the fucking time (Should be fine if another elevator takes the order.)
-						m.calculateAssignmentsCh <- ordermanager.ToHRAInput(m.data.hallRequests, m.data.cabRequests, m.data.states, m.data.suspendedElevators)
-					}
-				}
-			}
 
 			m.data.states[elevatorData.ID] = elevatorData
 			fmt.Println("Received data from: ", elevatorData.ID)
@@ -227,15 +198,59 @@ func (m *Master) runLoop() {
 	}
 }
 
-func (m *Master) pushOrdersToNewMaster(){
-	for floor := range N_FLOORS{
+func (m *Master) runRassignment() {
+	m.calculateAssignmentsCh <- ordermanager.ToHRAInput(m.data.hallRequests, m.data.cabRequests, m.data.states, m.data.suspendedElevators)
+}
+
+func (d *masterData) clearAssignmentTimestamps(orders []types.Order) {
+	for _, order := range orders { 
+		if order.Type != types.Cab {
+			fmt.Printf("Clearing order: Floor: %d, Dirn: %s Assigned to: %s \n", order.Floor, order.Type.ToString(), d.timeSinceAssignmentUpdate[order.Floor][order.Type].ElevatorId)
+			d.timeSinceAssignmentUpdate[order.Floor][order.Type] = types.AssignedToAtTime{
+				ElevatorId: "",
+				TimeStamp:  time.Now(),
+			}
+		}
+	}
+}
+
+func (m *Master) suspendTimedOutElevators() bool{
+	// Suspending elevators that have assignments over maxOrderSuspendTime (Could be moved to some other case)
+	var elevWasSuspended = false
+
+	for floor := range N_FLOORS {
+		for orderType := range 2 {
+			cur := m.data.timeSinceAssignmentUpdate[floor][orderType]
+
+			if time.Since(cur.TimeStamp) > config.Cfg.MaxOrderSuspendTime && cur.ElevatorId != "" {
+				// Suspend the correct elevator
+				id := m.data.timeSinceAssignmentUpdate[floor][orderType].ElevatorId
+
+				tempState := m.data.states[id]
+				tempState.Suspended = types.SuspendedType{
+					IsSuspended: true,
+					TimeStamp:   time.Now(),
+				}
+
+				m.data.suspendedElevators[id] = tempState.Suspended
+				fmt.Printf("Suspended elevator: %s\n", id)
+				
+				elevWasSuspended = true				
+			}
+		}
+	}
+	return elevWasSuspended
+}
+
+func (m *Master) pushOrdersToNewMaster() {
+	for floor := range N_FLOORS {
 		for button := range 2 {
-			if(m.data.hallRequests[floor][button]){
+			if m.data.hallRequests[floor][button] {
 				m.transferOrders <- types.Order{Floor: floor, Type: types.OrderType(button)}
 			}
 		}
 		hallReq := m.data.cabRequests[m.id]
-		if(hallReq[floor]){
+		if hallReq[floor] {
 			m.transferOrders <- types.Order{Floor: floor, Type: types.Cab}
 		}
 

@@ -26,6 +26,7 @@ type Config struct {
 	MaxOrderSuspendTime    time.Duration `json:"maxOrderSuspendTime"`
 	MaxElevatorSuspendTime time.Duration `json:"maxElevatorSuspendTime"`
 
+	ResendAssignmentTime time.Duration `json:"resendAssignmentTime"`
 	// N_FLOORS int `json:"nFloors"`
 	// N_BUTTONS int `json:"nButtons"` //TODO: Er dette forksjellige i elevatorManager og orderManager? Isåfall hva gjør man?
 }
@@ -51,6 +52,8 @@ var defaultValues = Config{
 
 	NewBackupTimeoutTime: 500 * time.Millisecond, //Needs to be bigger than heartbeatinterval
 	NewMasterTimeoutTime: 500 * time.Millisecond,
+
+	ResendAssignmentTime: 500 * time.Millisecond,
 }
 
 // Load returns the config, falling back to defaults

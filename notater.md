@@ -7,7 +7,7 @@
 ## Hva mangler vi sjef
 * Timeout på orders - check
 * Obstruction solution - check
-* Resend Assignments -
+* Resend Assignments - check
 * Backup -
 * Reconfiguratiom etter at en heis ble koblet fra (huske gamle caborders) 
 * Process pair - 

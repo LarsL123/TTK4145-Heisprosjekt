@@ -64,3 +64,10 @@ Brage som tester reelection på egen pc:
 
 sudo ip route add 255.255.255.255 dev lo
 sudo ip route del 255.255.255.255 dev lo
+
+
+
+
+
+
+Skal vi ha selfID og id?

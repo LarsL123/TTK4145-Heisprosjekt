@@ -21,7 +21,7 @@ type Heartbeat struct {
 	Role Role
 }
 
-func Reelection(selfID string, toggelMaster chan bool, toggleBackup chan bool) {
+func Reelection(selfID string, toggleMaster chan bool, toggleBackup chan bool) {
 	role := Slave
 
 	// Setting this a little bit higher so that startup goes fine
@@ -42,17 +42,17 @@ func Reelection(selfID string, toggelMaster chan bool, toggleBackup chan bool) {
 		switch r {
 		case Master:
 			fmt.Println("I am master:", selfID)
-			toggelMaster <- true
+			toggleMaster <- true
 			toggleBackup <- true
 
 		case Backup:
 			fmt.Println("I am backup:", selfID)
-			toggelMaster <- false
+			toggleMaster <- false
 			toggleBackup <- true
 
 		case Slave:
 			fmt.Println("I am slave:", selfID)
-			toggelMaster <- false
+			toggleMaster <- false
 			toggleBackup <- false
 		}
 	}
@@ -64,7 +64,6 @@ func Reelection(selfID string, toggelMaster chan bool, toggleBackup chan bool) {
 		select {
 
 		case hb := <-receiveHeartbeatCh:
-
 			if hb.ID == selfID {
 				continue
 			}

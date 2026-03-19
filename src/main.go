@@ -15,21 +15,17 @@ func main() {
 
 	masterAliveCh := make(chan struct{}, 1)
 	slaveAliveCh := make(chan struct{}, 1)
-
 	toggleMaster := make(chan bool, 2)
 	toggleBackup := make(chan bool, 2)
-
 	forwardOrdersFromBackup := make(chan types.OrderEnvelope, 12)  // backup -> master
 	ordersFromMasterCollison := make(chan types.OrderEnvelope, 12) // master killing itself because it detects another master -> slave
 
 	master := controllers.NewMaster(id, toggleMaster)
-	go master.Start(forwardOrdersFromBackup, ordersFromMasterCollison, masterAliveCh)
-
 	slave := controllers.NewSlave(id)
+
+	go master.Start(forwardOrdersFromBackup, ordersFromMasterCollison, masterAliveCh)
 	go slave.Start(ordersFromMasterCollison, slaveAliveCh)
-
 	go controllers.RunBackup(toggleBackup, forwardOrdersFromBackup)
-
 	go reelection.Reelection(id, toggleMaster, toggleBackup)
 
 	processpair.KillDeadProcess(masterAliveCh, slaveAliveCh)

@@ -18,7 +18,7 @@ const (
 
 type Heartbeat struct {
 	ID   string
-	Role Role 
+	Role Role
 }
 
 func ReelectionFSM(selfID string, isMasterCh chan bool, backupMasterCh chan bool) {
@@ -26,8 +26,8 @@ func ReelectionFSM(selfID string, isMasterCh chan bool, backupMasterCh chan bool
 	role := Slave
 
 	// Setting this a little bit higher so that startup goes fine
-	masterTimer := time.NewTicker(config.Cfg.NewMasterTimeoutTime*3)
-	backupTimer := time.NewTicker(config.Cfg.NewBackupTimeoutTime*3)
+	masterTimer := time.NewTicker(config.Cfg.NewMasterTimeoutTime * 3)
+	backupTimer := time.NewTicker(config.Cfg.NewBackupTimeoutTime * 3)
 
 	// Setting up heartbeat
 	heartbeatTicker := time.NewTicker(config.Cfg.HeartbeatInterval)
@@ -43,13 +43,12 @@ func ReelectionFSM(selfID string, isMasterCh chan bool, backupMasterCh chan bool
 		case Master:
 			fmt.Println("I am master:", selfID)
 			isMasterCh <- true
-			backupMasterCh <- false
+			backupMasterCh <- true
 
 		case Backup:
 			fmt.Println("I am backup:", selfID)
 			isMasterCh <- false
 			backupMasterCh <- true
-
 
 		case Slave:
 			fmt.Println("I am slave:", selfID)
@@ -59,7 +58,7 @@ func ReelectionFSM(selfID string, isMasterCh chan bool, backupMasterCh chan bool
 	}
 
 	role = Slave
-	fmt.Println("I am slave:",selfID)
+	fmt.Println("I am slave:", selfID)
 
 	for {
 		select {

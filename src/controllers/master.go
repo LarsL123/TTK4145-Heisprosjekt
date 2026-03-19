@@ -217,7 +217,7 @@ func (m *Master) roleChange() {
 	} else {
 		m.data.suspendedElevators = make(map[string]types.SuspendedType)
 		m.data.timeSinceAssignmentUpdate = [N_FLOORS][2]types.AssignedToAtTime{}
-		//m.runReassignment()
+		//m.runReassignment() BUG WAS SPLATTERED
 	}
 }
 

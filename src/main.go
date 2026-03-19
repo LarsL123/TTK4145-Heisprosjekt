@@ -23,7 +23,7 @@ func main() {
 	ordersFromMasterCollison := make(chan types.OrderEnvelope, 12) // master killing itself because it detects another master -> slave
 
 	master := controllers.NewMaster(id, toggleMaster)
-	go master.Start(ordersFromMasterCollison, forwardOrdersFromBackup, masterAliveCh)
+	go master.Start(forwardOrdersFromBackup, ordersFromMasterCollison, masterAliveCh)
 
 	slave := controllers.NewSlave(id)
 	go slave.Start(ordersFromMasterCollison, slaveAliveCh)

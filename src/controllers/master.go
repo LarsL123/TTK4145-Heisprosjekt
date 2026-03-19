@@ -175,7 +175,7 @@ func (m *Master) runLoop(forwardOrdersFromBackup chan types.OrderEnvelope, trans
 			m.sendAssignmentsCh <- types.Assignments{Assignments: m.mergeAssignmentsWithCabRequests(pending.assignments)} // TODO: Rename this channel? Might be inaccurate
 
 		case order := <-transferMasterOrders:
-			fmt.Println("Reciving order from dead master")
+			fmt.Println("Receiving order from dead master")
 			hasChanged := m.data.storeOrder(order.Order, order.ElevatorID)
 			if hasChanged {
 				m.runReassignment()

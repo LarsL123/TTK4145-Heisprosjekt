@@ -116,10 +116,13 @@ func (m *Master) runLoop(forwardOrdersFromBackup chan types.OrderEnvelope, trans
 	defer resendToBackupTicker.Stop()
 
 	for {
-		pingProcessPair(masterAliveCh)
-
 		if !m.isMaster {
-			m.drainChannels()
+			select {
+			case <-suspensionTicker.C:
+				pingProcessPair(masterAliveCh)
+			default:
+				m.drainChannels()
+			}
 			continue
 		}
 
@@ -131,14 +134,8 @@ func (m *Master) runLoop(forwardOrdersFromBackup chan types.OrderEnvelope, trans
 			m.elevatorSuspension()
 			pingProcessPair(masterAliveCh) // should probably have own ticker if we think they need other ticker rate // random placed just have to called periodically
 
-		case orderReceived := <-m.receiveElevatorOrdersCh: // BRAGE: Mixing abstraction layers...
-			fmt.Println("Receiving order, sending ack")
-			m.ackOrderCh <- types.OrderAck{UpdateNr: orderReceived.UpdateNr}
-
-			hasChanged := m.data.storeOrder(orderReceived.Order, orderReceived.ElevatorID)
-			if hasChanged {
-				m.runReassignment()
-			}
+		case order := <-m.receiveElevatorOrdersCh: // BRAGE: Mixing abstraction layers...
+			m.ackOrder(order)
 
 		case completedAssignments := <-m.completedAssignmentCh: // BRAGE: Refactor: ()
 			m.ackAndReassign(completedAssignments)
@@ -146,19 +143,17 @@ func (m *Master) runLoop(forwardOrdersFromBackup chan types.OrderEnvelope, trans
 		case assignments := <-m.rawAssignmentsCh:
 			m.sendToBackup(assignments)
 
-		case ack := <-m.receiveBackupAckCh: //
-			pending, ok := m.pendingBackupOrders[ack.UpdateNr]
-			if !ok {
+		case ack := <-m.receiveBackupAckCh:
+			if !m.processBackupAck(ack) {
 				continue
 			}
-			delete(m.pendingBackupOrders, ack.UpdateNr)
-
-			m.updateAssignmentTimestamps(pending.assignments)
-			m.sendAssignmentsCh <- types.Assignments{Assignments: m.mergeAssignmentsWithCabRequests(pending.assignments)} // TODO: Rename this channel? Might be inaccurate
-
 		case order := <-transferMasterOrders: // BRAGE: bad to print in case?
-			m.restoreDeadMasterData(order)
-			
+			fmt.Println("Receiving order from dead master")
+			hasChanged := m.data.storeOrder(order.Order, order.ElevatorID)
+			if hasChanged {
+				m.runReassignment()
+			}
+
 		case envelope := <-forwardOrdersFromBackup:
 			hasChanged := m.data.storeOrder(envelope.Order, envelope.ElevatorID)
 			if hasChanged {
@@ -177,19 +172,34 @@ func (m *Master) runLoop(forwardOrdersFromBackup chan types.OrderEnvelope, trans
 	}
 }
 
+func (m *Master) ackOrder(order types.OrderEnvelope) {
+	fmt.Println("Receiving order, sending ack")
+	m.ackOrderCh <- types.OrderAck{UpdateNr: order.UpdateNr}
+
+	hasChanged := m.data.storeOrder(order.Order, order.ElevatorID)
+	if hasChanged {
+		m.runReassignment()
+	}
+}
+
+func (m *Master) processBackupAck(ack types.BackupDataAck) bool {
+	pending, ok := m.pendingBackupOrders[ack.UpdateNr]
+	if !ok {
+		return false
+	}
+	delete(m.pendingBackupOrders, ack.UpdateNr)
+
+	m.updateAssignmentTimestamps(pending.assignments)
+	m.sendAssignmentsCh <- types.Assignments{Assignments: m.mergeAssignmentsWithCabRequests(pending.assignments)} // TODO: Rename this channel? Might be inaccurate
+
+	return true
+}
+
 func (m *Master) ackAndReassign(completedAssignments types.FinishedHallAssignments) {
 	m.ackAssignmentCompletedCh <- types.FinishedHallAssignmentsAck{UpdateNr: completedAssignments.UpdateNr}
 
 	if m.data.removeOrders(completedAssignments.Orders, completedAssignments.ElevatorID) {
 		m.data.clearAssignmentTimestamps(completedAssignments.Orders)
-		m.runReassignment()
-	}
-}
-
-func (m *Master) restoreDeadMasterData(order types.OrderEnvelope) {
-	fmt.Println("Receiving order from dead master")
-	hasChanged := m.data.storeOrder(order.Order, order.ElevatorID)
-	if hasChanged {
 		m.runReassignment()
 	}
 }
@@ -207,12 +217,11 @@ func (m *Master) elevatorSuspension() {
 }
 
 func (m *Master) roleChange() {
-	if m.isMaster == false { // May be redundant.
-		m.pushOrdersToNewMaster()
-	} else {
+	if m.isMaster {
 		m.data.suspendedElevators = make(map[string]types.SuspendedType)
 		m.data.timeSinceAssignmentUpdate = [N_FLOORS][2]types.AssignedToAtTime{}
-		// m.runReassignment() BUG WAS SPLATTERED
+	} else {
+		m.pushOrdersToNewMaster()
 	}
 }
 

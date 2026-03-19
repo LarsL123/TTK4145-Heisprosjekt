@@ -8,8 +8,8 @@
 * Timeout på orders - check 
 * Obstruction solution - check
 * Resend Assignments - check
-* Backup -
-* Reconfiguratiom etter at en heis ble koblet fra (huske gamle caborders) 
+* Backup - check
+* Reconfiguratiom etter at en heis ble koblet fra (huske gamle caborders) - check 
 * Process pair - check
 
 Testing:

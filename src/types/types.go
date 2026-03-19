@@ -90,18 +90,16 @@ type Order struct {
 }
 
 type BackupData struct {
-	UpdateNr   int
-	HallRequests              [N_FLOORS][2]bool
-	CabRequests               map[string][N_FLOORS]bool
+	UpdateNr     int
+	HallRequests [N_FLOORS][2]bool
+	CabRequests  map[string][N_FLOORS]bool
 }
 
 type BackupDataAck struct {
-	UpdateNr   int
+	UpdateNr int
 }
 
 type AssignedToAtTime struct {
 	ElevatorId string
 	TimeStamp  time.Time
 }
-
-

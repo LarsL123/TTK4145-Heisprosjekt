@@ -2,13 +2,11 @@ package elevatormanager
 
 import (
 	"elevatorproject/src/config"
-	//"elevatorproject/src/elevio"
 	"elevatorproject/src/types"
 	"fmt"
 	"testing"
 	"time"
 )
-
 
 func resetter_timer() {
 	for i := 0; i < 5; i++ {
@@ -26,7 +24,7 @@ func TestSingleElevator(t *testing.T) {
 	sendAssignmentsCh := make(chan [N_FLOORS][N_BUTTONS]bool)
 	receiveElevatorState := make(chan types.ElevatorState)
 
-	go ElevatorManager(receiveElevatorState, receiveOrdersCh, receiveFinishedOrderCh, sendAssignmentsCh,sendLightsCh)
+	go ElevatorManager(receiveElevatorState, receiveOrdersCh, receiveFinishedOrderCh, sendAssignmentsCh, sendLightsCh)
 
 	var requests [N_FLOORS][N_BUTTONS]bool
 

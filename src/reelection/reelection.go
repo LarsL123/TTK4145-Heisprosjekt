@@ -31,6 +31,7 @@ func ReelectionFSM(selfID string, isMasterCh chan bool, backupMasterCh chan bool
 
 	// Setting up heartbeat
 	heartbeatTicker := time.NewTicker(config.Cfg.HeartbeatInterval)
+
 	sendHeartbeatCh := make(chan Heartbeat)
 	go bcast.Transmitter(config.Cfg.HeartbeatPort, sendHeartbeatCh)
 	heartbeatCh := make(chan Heartbeat, 32)

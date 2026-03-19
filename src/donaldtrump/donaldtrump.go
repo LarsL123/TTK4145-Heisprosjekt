@@ -9,16 +9,8 @@ import (
 	"time"
 )
 
-/*
-
- Im gonne create the greates eleavtor youll ever see. Its gonne go to 1000 floors, yeah it can go to the moon.
- It will be the greatest and fastest elevator in the history of elevators.
- And we gonne make china pay for it.
-
-*/
-
-const N_FLOORS = 4
-const N_BUTTONS = 3
+const N_FLOORS = config.N_FLOORS
+const N_BUTTONS = config.N_BUTTONS
 
 type Master struct {
 	id       string
@@ -33,9 +25,10 @@ type Master struct {
 	isMasterCh                          chan bool
 	transferOrdersWhenMasterDowngradeCh chan types.OrderEnvelope
 	forwardOrdersFromBackup             chan types.OrderEnvelope
+	masterAliveCh                       chan struct{}
 
 	calculateAssignmentsCh chan ordermanager.HRAInput
-	rawAssignmentsCh       chan map[string][N_FLOORS][2]bool
+	rawAssignmentsCh       chan map[string][config.N_FLOORS][2]bool
 
 	updateStreamCh          chan types.ElevatorState
 	receiveElevatorOrdersCh chan types.OrderEnvelope
@@ -65,25 +58,24 @@ type pendingAssignment struct {
 	createdAt   time.Time
 }
 
-func NewMaster(id string, isMasterCh chan bool, transferMasterOrders chan types.OrderEnvelope, forwardOrdersFromBAckup chan types.OrderEnvelope) *Master {
+func NewMaster(id string, isMasterCh chan bool, transferMasterOrders chan types.OrderEnvelope, forwardOrdersFromBAckup chan types.OrderEnvelope, masterAliveCh chan struct{}) *Master {
 	m := &Master{
 		id:         id,
 		isMasterCh: isMasterCh,
 		isMaster:   false,
 
 		data: masterData{
-			//hallRequests: [N_FLOORS][2]bool{{false, false}, {false, false}, {false, false}, {false, false}},
 			states:             make(map[string]types.ElevatorState),
 			cabRequests:        make(map[string][N_FLOORS]bool),
 			suspendedElevators: make(map[string]types.SuspendedType),
-
-			//timeSinceAssignmentUpdate: [N_FLOORS][2]types.AssignedToAtTime, //TODO - Trenger vi denne? idk, den blir default assigned til "" og jesu fødsel, så i guess det går fint
 		},
 
 		printTimer: time.NewTimer(5 * time.Second),
 
+		//
 		transferOrdersWhenMasterDowngradeCh: transferMasterOrders,
 		forwardOrdersFromBackup:             forwardOrdersFromBAckup,
+		masterAliveCh:                       masterAliveCh,
 
 		//Order calculation
 		calculateAssignmentsCh: make(chan ordermanager.HRAInput),
@@ -108,7 +100,7 @@ func NewMaster(id string, isMasterCh chan bool, transferMasterOrders chan types.
 	return m
 }
 
-func (m *Master) Start(masterAliveCh chan struct{}) {
+func (m *Master) Start() {
 	go ordermanager.ManageOrders(m.calculateAssignmentsCh, m.rawAssignmentsCh)
 
 	go bcast.Receiver(
@@ -128,27 +120,28 @@ func (m *Master) Start(masterAliveCh chan struct{}) {
 	go bcast.Transmitter(config.Cfg.BackupSendPort, m.sendBackupDataCh)
 	go bcast.Receiver(config.Cfg.BackupReceivePort, m.receiveBackupAckCh)
 
-	m.runLoop(masterAliveCh)
+	m.runLoop()
 
 }
 
 func pingProcessPair(aliveCh chan struct{}) {
-	select { // should probably have own ticker if we think they need other ticker rate
+	select {
 	case aliveCh <- struct{}{}:
 	default:
 	}
 }
 
-func (m *Master) runLoop(aliveCh chan struct{}) {
-	suspensionTicker := time.NewTicker(500 * time.Millisecond)
+func (m *Master) runLoop() {
+	suspensionTicker := time.NewTicker(config.Cfg.SupspensionTimer)
 	defer suspensionTicker.Stop()
 
-	resendToBackupTicker := time.NewTicker(15 * time.Millisecond) //TODO: Add to config
+	resendToBackupTicker := time.NewTicker(config.Cfg.ResendToBackupTicker)
 	defer resendToBackupTicker.Stop()
+
 	for {
 		if !m.isMaster {
 			m.drainChannels()
-			pingProcessPair(aliveCh)
+			pingProcessPair(m.masterAliveCh)
 			continue
 		}
 
@@ -172,8 +165,8 @@ func (m *Master) runLoop(aliveCh chan struct{}) {
 				m.runReassignment()
 			}
 
-			//Random placed just have to called.
-			pingProcessPair(aliveCh) // should probably have own ticker if we think they need other ticker rate
+			//Random placed just have to called periodically
+			pingProcessPair(m.masterAliveCh) // should probably have own ticker if we think they need other ticker rate
 
 		case orderReceived := <-m.receiveElevatorOrdersCh:
 			fmt.Println("Receiving order, sending ack")
@@ -181,7 +174,7 @@ func (m *Master) runLoop(aliveCh chan struct{}) {
 
 			hasChanged := m.data.storeOrder(orderReceived.Order, orderReceived.ElevatorID)
 			if hasChanged {
-				m.runReassignment() //Loops back to case
+				m.runReassignment()
 			}
 
 		case completedAssignments := <-m.completedAssignmentCh:
@@ -217,6 +210,7 @@ func (m *Master) runLoop(aliveCh chan struct{}) {
 			m.sendAssignmentsCh <- types.Assignments{Assignments: m.mergeAssignmentsWithCabRequests(pending.assignments)} // TODO: Rename this channel? Might be inaccurate
 
 		case order := <-m.transferOrdersWhenMasterDowngradeCh:
+			fmt.Println("Reciving order from dead master")
 			hasChanged := m.data.storeOrder(order.Order, order.ElevatorID)
 			if hasChanged {
 				m.runReassignment()
@@ -455,6 +449,6 @@ func (m *Master) drainChannels() {
 	case <-m.transferOrdersWhenMasterDowngradeCh:
 	case <-m.forwardOrdersFromBackup:
 	case <-m.receiveBackupAckCh:
-		// default: no default, this might be a bug
+	default:
 	}
 }

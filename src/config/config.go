@@ -34,11 +34,17 @@ type Config struct {
 	WatchdogTimeout time.Duration `json:"watchdogTimeout"`
 
 	ElevatorDeadTimeout time.Duration `json:"elevatorDeadTimeout"`
+
+	ResendToBackupTicker time.Duration `json:"resendToBackupTicker"`
+	SupspensionTimer     time.Duration `json:"suspensionTimer"`
 	// N_FLOORS int `json:"nFloors"`
 	// N_BUTTONS int `json:"nButtons"` //TODO: Er dette forksjellige i elevatorManager og orderManager? Isåfall hva gjør man?
 }
 
 var Cfg Config
+
+const N_FLOORS = 4
+const N_BUTTONS = 3
 
 var defaultValues = Config{
 	HeartbeatPort:      15647,
@@ -68,6 +74,9 @@ var defaultValues = Config{
 
 	ElevatorDeadTimeout: 1 * time.Second, // Maybe need to increas this to more than 10x ElevatorUpdateRate in case of high packetloss
 
+	ResendToBackupTicker: 15 * time.Millisecond,
+
+	SupspensionTimer: 500 * time.Millisecond,
 }
 
 // Load returns the config, falling back to defaults

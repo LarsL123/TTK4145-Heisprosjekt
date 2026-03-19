@@ -31,9 +31,9 @@ type NetworkChannels struct {
 }
 
 type ElevatorChannels struct {
-	receiveElevatorState     chan types.ElevatorState
-	receiveOrdersCh          chan types.Order
-	receiveCompletedOrdersCh chan []types.Order
+	receiveElevatorState          chan types.ElevatorState
+	receiveOrdersCh               chan types.Order
+	receiveCompletedAssignmentsCh chan []types.Order
 
 	sendAssignmentsCh chan [N_FLOORS][N_BUTTONS]bool
 	sendLightsCh      chan [N_FLOORS][N_BUTTONS]bool
@@ -41,11 +41,11 @@ type ElevatorChannels struct {
 
 func NewSlave(id string) *Slave {
 	elev := ElevatorChannels{
-		receiveElevatorState:     make(chan types.ElevatorState),
-		receiveOrdersCh:          make(chan types.Order, 10),
-		receiveCompletedOrdersCh: make(chan []types.Order, 10),
-		sendAssignmentsCh:        make(chan [N_FLOORS][N_BUTTONS]bool),
-		sendLightsCh:             make(chan [N_FLOORS][N_BUTTONS]bool),
+		receiveElevatorState:          make(chan types.ElevatorState),
+		receiveOrdersCh:               make(chan types.Order, 10),
+		receiveCompletedAssignmentsCh: make(chan []types.Order, 10),
+		sendAssignmentsCh:             make(chan [N_FLOORS][N_BUTTONS]bool),
+		sendLightsCh:                  make(chan [N_FLOORS][N_BUTTONS]bool),
 	}
 
 	net := NetworkChannels{
@@ -66,7 +66,7 @@ func NewSlave(id string) *Slave {
 	}
 }
 
-func (s *Slave) Start(id string, transferDeadMaster chan types.OrderEnvelope, aliveCh chan struct{}) {
+func (s *Slave) Start(transferDeadMaster chan types.OrderEnvelope, aliveCh chan struct{}) {
 	var slaveRequests [N_FLOORS][N_BUTTONS]bool
 
 	//Resending logic:
@@ -78,7 +78,7 @@ func (s *Slave) Start(id string, transferDeadMaster chan types.OrderEnvelope, al
 	elevator := s.elevator
 
 	// Start ElevatorManager
-	go elevatormanager.ElevatorManager(s.elevator.receiveElevatorState, s.elevator.receiveOrdersCh, s.elevator.receiveCompletedOrdersCh, s.elevator.sendAssignmentsCh, s.elevator.sendLightsCh)
+	go elevatormanager.ElevatorManager(s.elevator.receiveElevatorState, s.elevator.receiveOrdersCh, s.elevator.receiveCompletedAssignmentsCh, s.elevator.sendAssignmentsCh, s.elevator.sendLightsCh)
 
 	// Broadcast transmitter & receiver
 	go bcast.Transmitter(config.Cfg.MasterListenPort, s.net.sendElevatorState, s.net.sendOrdersCh, s.net.sendFinishedAssignmentsCh)
@@ -88,20 +88,21 @@ func (s *Slave) Start(id string, transferDeadMaster chan types.OrderEnvelope, al
 		select {
 
 		case state := <-elevator.receiveElevatorState:
-			state.ID = id
+			state.ID = s.id
 			net.sendElevatorState <- state
 
 		case order := <-transferDeadMaster:
 			s.transferToMaster(order)
 
 		case order := <-elevator.receiveOrdersCh:
-			s.broadcastOrder(s.id, order) // TODO
+			s.sendOrder(s.id, order)
 
 		case assignment := <-net.receiveAssignmentsFromMaster:
-			s.handleNewAssignments(assignment, &slaveRequests) // TODO
+			s.handleNewAssignments(assignment, &slaveRequests)
 
-		case finishedOrders := <-elevator.receiveCompletedOrdersCh:
-			s.returnCompletedAssignment(finishedOrders, &slaveRequests)
+		case finishedAssignments := <-elevator.receiveCompletedAssignmentsCh:
+			s.returnCompletedAssignment(finishedAssignments, &slaveRequests)
+
 		case ack := <-net.hallOrderAck:
 			fmt.Println("Received ACK for order", ack.UpdateNr)
 			delete(s.pendingOrders, ack.UpdateNr)
@@ -110,7 +111,7 @@ func (s *Slave) Start(id string, transferDeadMaster chan types.OrderEnvelope, al
 			fmt.Println("Recived ACK for assignment", ack.UpdateNr)
 			delete(s.pendingFinishedAssignments, ack.UpdateNr)
 
-		case <-resendTicker.C: // Will only send aliveCh if nothing else going on, might be a problem if there's a lot going on
+		case <-resendTicker.C:
 			s.resendLostPackets()
 			pingProcessPair(aliveCh)
 
@@ -135,7 +136,7 @@ func (s *Slave) transferToMaster(order types.OrderEnvelope) {
 	fmt.Println("Transfering order from dead master", order)
 
 	if order.Order.Type == types.Cab {
-		s.broadcastOrder(order.ElevatorID, order.Order) //TODO: Kan daniel bestemme om vi bare kan brodcaste alle???? Er mer clean, og slipper gjennom FSM
+		s.sendOrder(order.ElevatorID, order.Order) //TODO: Kan daniel bestemme om vi bare kan brodcaste alle???? Er mer clean, og slipper gjennom FSM
 	} else {
 		s.elevator.receiveOrdersCh <- order.Order
 	}
@@ -170,7 +171,7 @@ func (s *Slave) handleNewAssignments(as types.Assignments, requests *[N_FLOORS][
 	s.elevator.sendLightsCh <- calculateLights(as.Assignments, *requests)
 }
 
-func (s *Slave) broadcastOrder(id string, order types.Order) {
+func (s *Slave) sendOrder(id string, order types.Order) {
 	s.messageCount++
 	ho := createHallOrder(id, order, s.messageCount)
 
@@ -190,16 +191,16 @@ func cleanExpiredMessages[T types.LivingMessage](pending map[int]T) {
 func calculateLights(assignments map[string][N_FLOORS][3]bool, slaveRequests [N_FLOORS][N_BUTTONS]bool) [N_FLOORS][N_BUTTONS]bool {
 	var lightsOn [N_FLOORS][N_BUTTONS]bool
 	for _, assignment := range assignments {
-		for i := range N_FLOORS {
-			for j := range 2 {
-				if assignment[i][j] {
-					lightsOn[i][j] = true
+		for floor := range N_FLOORS {
+			for btn := range 2 {
+				if assignment[floor][btn] {
+					lightsOn[floor][btn] = true
 				}
 			}
 		}
 	}
-	for i := range N_FLOORS {
-		lightsOn[i][2] = slaveRequests[i][2]
+	for floor := range N_FLOORS {
+		lightsOn[floor][2] = slaveRequests[floor][2]
 	}
 	return lightsOn
 }

@@ -21,21 +21,20 @@ type Heartbeat struct {
 	Role Role
 }
 
-func ReelectionFSM(selfID string, isMasterCh chan bool, backupMasterCh chan bool) {
-
+func Reelection(selfID string, toggelMaster chan bool, toggleBackup chan bool) {
 	role := Slave
 
 	// Setting this a little bit higher so that startup goes fine
 	masterTimer := time.NewTicker(config.Cfg.NewMasterTimeoutTime * 3)
 	backupTimer := time.NewTicker(config.Cfg.NewBackupTimeoutTime * 3)
 
-	// Setting up heartbeat
 	heartbeatTicker := time.NewTicker(config.Cfg.HeartbeatInterval)
 
 	sendHeartbeatCh := make(chan Heartbeat)
+	receiveHeartbeatCh := make(chan Heartbeat, 32)
+
 	go bcast.Transmitter(config.Cfg.HeartbeatPort, sendHeartbeatCh)
-	heartbeatCh := make(chan Heartbeat, 32)
-	go bcast.Receiver(config.Cfg.HeartbeatPort, heartbeatCh)
+	go bcast.Receiver(config.Cfg.HeartbeatPort, receiveHeartbeatCh)
 
 	startRole := func(r Role) {
 		role = r
@@ -43,18 +42,18 @@ func ReelectionFSM(selfID string, isMasterCh chan bool, backupMasterCh chan bool
 		switch r {
 		case Master:
 			fmt.Println("I am master:", selfID)
-			isMasterCh <- true
-			backupMasterCh <- true
+			toggelMaster <- true
+			toggleBackup <- true
 
 		case Backup:
 			fmt.Println("I am backup:", selfID)
-			isMasterCh <- false
-			backupMasterCh <- true
+			toggelMaster <- false
+			toggleBackup <- true
 
 		case Slave:
 			fmt.Println("I am slave:", selfID)
-			isMasterCh <- false
-			backupMasterCh <- false
+			toggelMaster <- false
+			toggleBackup <- false
 		}
 	}
 
@@ -64,34 +63,14 @@ func ReelectionFSM(selfID string, isMasterCh chan bool, backupMasterCh chan bool
 	for {
 		select {
 
-		case hb := <-heartbeatCh:
+		case hb := <-receiveHeartbeatCh:
 
 			if hb.ID == selfID {
 				continue
 			}
 
-			switch hb.Role {
-			case Master:
-				masterTimer.Reset(config.Cfg.NewMasterTimeoutTime)
-
-				if role == Master {
-					if hb.ID > selfID {
-						fmt.Println("Higher ID master detected → stepping down")
-						startRole(Slave)
-					}
-				}
-
-			case Backup:
-				backupTimer.Reset(config.Cfg.NewBackupTimeoutTime)
-
-				if role == Backup {
-					if hb.ID > selfID {
-						fmt.Println("Higher ID backup detected → stepping down")
-						backupTimer.Reset(config.Cfg.NewBackupTimeoutTime * 3)
-						startRole(Slave)
-					}
-				}
-			}
+			resetTimers(masterTimer, backupTimer)
+			handleDuplicate(hb, role, selfID, startRole)
 
 		case <-masterTimer.C:
 			if role == Backup {
@@ -110,6 +89,31 @@ func ReelectionFSM(selfID string, isMasterCh chan bool, backupMasterCh chan bool
 				sendHeartbeatCh <- Heartbeat{ID: selfID, Role: role}
 			}
 
+		}
+	}
+}
+
+func resetTimers(masterTimer *time.Ticker, backupTimer *time.Ticker) {
+	masterTimer.Reset(config.Cfg.NewMasterTimeoutTime)
+	backupTimer.Reset(config.Cfg.NewBackupTimeoutTime)
+}
+
+func handleDuplicate(hb Heartbeat, role Role, selfID string, startRole func(Role)) {
+	switch hb.Role {
+	case Master:
+		if role == Master {
+			if hb.ID > selfID {
+				fmt.Println("Higher ID master detected → stepping down")
+				startRole(Slave)
+			}
+		}
+
+	case Backup:
+		if role == Backup {
+			if hb.ID > selfID {
+				fmt.Println("Higher ID backup detected → stepping down")
+				startRole(Slave)
+			}
 		}
 	}
 }

@@ -14,7 +14,6 @@ const address = "0.0.0.0:15657"
 const N_BUTTONS = 3
 const DOOR_OPEN_DURATION = 3 // [seconds]
 
-// TODO: vi har en bug i elevatormanager med obstruction. Vi må sjekke obstruction ved init. Hvis ikke så kan heisen når den blir revivet av process pairen begynne å bevege seg selv om den er obstructed.
 
 func ElevatorManager(elevStateCh chan<- types.ElevatorState, sendOrderCh chan types.Order, sendFinishedOrderch chan []types.Order, receiveAssignmentsCh chan [N_FLOORS][N_BUTTONS]bool, receiveLIghtsCh chan [N_FLOORS][N_BUTTONS]bool) {
 

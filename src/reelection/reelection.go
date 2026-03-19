@@ -3,7 +3,6 @@ package reelection
 import (
 	"fmt"
 	"time"
-
 	"Network-go/network/bcast"
 	"elevatorproject/src/config"
 )

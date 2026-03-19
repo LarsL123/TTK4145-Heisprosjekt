@@ -19,7 +19,7 @@ func RunBackup(isMasterCh chan bool, forwardOrders chan types.OrderEnvelope) {
 	for {
 		select {
 		case savedData = <-receiveBackupDataCh:
-			sendBackupAckCh <- types.BackupDataAck{UpdateNr: savedData.UpdateNr} //TODO: DANIEL burde denne acke selv om den er slave?? Ja siden den skal acke om backupdataen er mottatt, slik at master kan sende til slavene uten å miste order hvis master dør.
+			sendBackupAckCh <- types.BackupDataAck{UpdateNr: savedData.UpdateNr} 
 		case isMaster := <-isMasterCh:
 			if isMaster {
 				pushOrdersToMaster(savedData, forwardOrders)
@@ -29,12 +29,11 @@ func RunBackup(isMasterCh chan bool, forwardOrders chan types.OrderEnvelope) {
 }
 
 func pushOrdersToMaster(data types.BackupData, forwardOrders chan<- types.OrderEnvelope) {
-	// Sending all hallorders (Should probably be made into a function) started making pushOrdersToNewMaster, double check if it's correct before switching
 	for floor := range N_FLOORS {
 		for btn := range 2 {
 			if data.HallRequests[floor][btn] {
 				fmt.Println("Pushing HALL_ORDER from backup", floor, types.OrderType(btn).ToString())
-				forwardOrders <- types.OrderEnvelope{ //Might be an idea to not send every order, but to send everything together when you have looped through here
+				forwardOrders <- types.OrderEnvelope{ 
 					Order: types.Order{Floor: floor, Type: types.OrderType(btn)}, // Important to not use any of the other values in the orderenvelope as they are zero-values
 				}
 			}

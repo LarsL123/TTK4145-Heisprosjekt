@@ -65,13 +65,11 @@ func fsm_onNewAssignment(requests [N_FLOORS][N_BUTTONS]bool, sendClearedRequests
 		}
 	}
 	fsm_setAllLights()
-	elevator_print()
 }
 
 func fsm_onFloorArrival(newFloor int, sendClearedRequests chan []types.Order) {
 	fmt.Printf("Reached new floor: %d \n", newFloor)
 	elevator.floor = newFloor
-	elevator_print()
 
 	elevio.SetFloorIndicator(elevator.floor)
 
@@ -88,12 +86,10 @@ func fsm_onFloorArrival(newFloor int, sendClearedRequests chan []types.Order) {
 	default:
 		break
 	}
-	elevator_print()
 }
 
 func fsm_onDoorTimeout(sendClearedRequests chan []types.Order) {
 	fmt.Println("Door timed out")
-	elevator_print()
 
 	switch elevator.behaviour {
 	case EB_DoorOpen:

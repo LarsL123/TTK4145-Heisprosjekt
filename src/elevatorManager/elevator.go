@@ -65,14 +65,3 @@ func behaviourToString(behaviour Behaviour) string {
 		return "undefined"
 	}
 }
-
-func elevator_print() {
-	/*
-		fmt.Println("--------------------------------")
-		fmt.Printf("floor: %d\n"+
-			"dirn: %s\n"+
-			"behaviour: %s\n", elevator.floor, dirnToString(elevator.dirn), behaviourToString(elevator.behaviour))
-		fmt.Println("Requests:")
-		fmt.Print(elevator.requests)
-		fmt.Println("\n-------------------------------") */
-}

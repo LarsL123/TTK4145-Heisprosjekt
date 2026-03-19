@@ -88,7 +88,6 @@ func requestsShouldStop() bool {
 	}
 }
 
-// NB Side effect: requests på samme heis til samme etasje som heisen er på med dør åpen blir ikke sendt til master
 func requestShouldClearImmediately(buttonRequest elevio.ButtonEvent) bool {
 	return (elevator.floor == buttonRequest.Floor) && ((elevator.dirn == elevio.MD_Up && buttonRequest.Button == elevio.BT_HallUp) ||
 		(elevator.dirn == elevio.MD_Down && buttonRequest.Button == elevio.BT_HallDown) ||

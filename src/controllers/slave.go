@@ -145,7 +145,7 @@ func (s *Slave) transferToMaster(order types.OrderEnvelope) {
 	fmt.Println("Transfering order from dead master", order)
 
 	if order.Order.Type == types.Cab {
-		s.sendOrder(order.ElevatorID, order.Order) //TODO: Kan daniel bestemme om vi bare kan brodcaste alle???? Er mer clean, og slipper gjennom FSM
+		s.sendOrder(order.ElevatorID, order.Order)
 	} else {
 		s.sendOrder(order.ElevatorID, order.Order)
 		s.elevator.receiveOrdersCh <- order.Order

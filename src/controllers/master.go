@@ -132,12 +132,12 @@ func (m *Master) runLoop(forwardOrdersFromBackup chan types.OrderEnvelope, trans
 
 		case <-suspensionTicker.C:
 			m.elevatorSuspension()
-			pingProcessPair(masterAliveCh) // should probably have own ticker if we think they need other ticker rate // random placed just have to called periodically
+			pingProcessPair(masterAliveCh)
 
-		case order := <-m.receiveElevatorOrdersCh: // BRAGE: Mixing abstraction layers...
+		case order := <-m.receiveElevatorOrdersCh:
 			m.ackOrder(order)
 
-		case completedAssignments := <-m.completedAssignmentCh: // BRAGE: Refactor: ()
+		case completedAssignments := <-m.completedAssignmentCh:
 			m.ackAndReassign(completedAssignments)
 
 		case assignments := <-m.rawAssignmentsCh:
@@ -147,7 +147,7 @@ func (m *Master) runLoop(forwardOrdersFromBackup chan types.OrderEnvelope, trans
 			if !m.processBackupAck(ack) {
 				continue
 			}
-		case order := <-transferMasterOrders: // BRAGE: bad to print in case?
+		case order := <-transferMasterOrders:
 			fmt.Println("Receiving order from dead master")
 			hasChanged := m.data.storeOrder(order.Order, order.ElevatorID)
 			if hasChanged {
@@ -164,7 +164,7 @@ func (m *Master) runLoop(forwardOrdersFromBackup chan types.OrderEnvelope, trans
 			m.resendBackupData()
 
 		case newData := <-m.updateStreamCh:
-			if newData.Floor == -1 { //TODO: Should maybe change this, might be an idea to let the elevatordata be saved but not used for reassignment if between floors
+			if newData.Floor == -1 {
 				continue
 			}
 			m.updateMasterDataStates(newData)
@@ -190,8 +190,7 @@ func (m *Master) processBackupAck(ack types.BackupDataAck) bool {
 	delete(m.pendingBackupOrders, ack.UpdateNr)
 
 	m.updateAssignmentTimestamps(pending.assignments)
-	m.sendAssignmentsCh <- types.Assignments{Assignments: m.mergeAssignmentsWithCabRequests(pending.assignments)} // TODO: Rename this channel? Might be inaccurate
-
+	m.sendAssignmentsCh <- types.Assignments{Assignments: m.mergeAssignmentsWithCabRequests(pending.assignments)}
 	return true
 }
 
@@ -281,7 +280,6 @@ func (m *Master) removeDeadElevators() {
 		if time.Since(state.CreatedAt) > config.Cfg.ElevatorDeadTimeout {
 			fmt.Printf("No state received from elevator %s - removing\n", id)
 			delete(m.data.states, id)
-			//delete(m.data.cabRequests,id) Could probably delete this, per now they are saved two places, which is probably not good, but what can we do...
 			delete(m.data.suspendedElevators, id)
 			m.runReassignment()
 		}
@@ -305,7 +303,6 @@ func (d *masterData) unsuspendElevators() bool {
 func (m *Master) mergeAssignmentsWithCabRequests(rawAssignments map[string][N_FLOORS][2]bool) map[string][N_FLOORS][N_BUTTONS]bool {
 	assignmentOut := make(map[string][N_FLOORS][N_BUTTONS]bool)
 
-	// Looping and creating map of assignments to send out to elevators
 	for id := range rawAssignments {
 		arr := [N_FLOORS][N_BUTTONS]bool{}
 		for i := 0; i < N_FLOORS; i++ {
@@ -359,8 +356,8 @@ func (d *masterData) clearAssignmentTimestamps(orders []types.Order) {
 }
 
 func (m *Master) suspendTimedOutElevators() bool {
-	// Suspending elevators that have assignments over maxOrderSuspendTime (Could be moved to some other case)
-	if len(m.data.states) <= 1 { // TODO: Might need to change this if m.data.states doesn't get updated when an elevator dies
+	// Suspending elevators that have assignments over maxOrderSuspendTime
+	if len(m.data.states) <= 1 {
 		return false
 	}
 
@@ -436,7 +433,7 @@ func (data *masterData) removeOrders(orders []types.Order, elevatorID string) bo
 	for _, order := range orders {
 		if order.Type == types.Cab {
 			arr := data.cabRequests[elevatorID]
-			if arr[order.Floor] { //TODO: Spøre gutta om de liker denne eller den uten if
+			if arr[order.Floor] {
 				hasChanged = true
 			}
 			arr[order.Floor] = false

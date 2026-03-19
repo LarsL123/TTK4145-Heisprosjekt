@@ -93,6 +93,7 @@ func ManageOrders(OrdersCh chan HRAInput, AssignmentsCh chan map[string][N_FLOOR
 		select {
 		case input := <-OrdersCh:
 			fmt.Println("Calculating orders")
+			
 
 			for id, state := range input.SuspendedElevators {
 				if state.IsSuspended {

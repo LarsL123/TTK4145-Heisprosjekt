@@ -15,5 +15,5 @@ Deretter bytt branch med git checkout mybranch
 ## For å bygge:
 `go build -o elevator ./src/` \
 deretter:
-`./startup.sh <id>`
+`./startup.sh <id>` (Viktig å huske `chmod +x startup.sh` )
 

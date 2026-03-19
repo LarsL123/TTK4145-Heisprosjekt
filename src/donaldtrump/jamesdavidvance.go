@@ -10,13 +10,12 @@ import (
 	"time"
 )
 
-func RunSlaveBrain(id string, transferDeadMaster chan types.Order,aliveCh chan struct{}) {
+func RunSlaveBrain(id string, transferDeadMaster chan types.OrderEnvelope, aliveCh chan struct{}) {
 	var messageCount int = 0
 	var slaveRequests [N_FLOORS][N_BUTTONS]bool
 
-
 	// Channels
-	receiveOrdersCh := make(chan types.Order)
+	receiveOrdersCh := make(chan types.Order, 10)
 	receiveFinishedAssignmentsCh := make(chan []types.Order, 10)
 	receiveElevatorState := make(chan types.ElevatorState)
 
@@ -50,8 +49,24 @@ func RunSlaveBrain(id string, transferDeadMaster chan types.Order,aliveCh chan s
 	for {
 		select {
 
-		case order := <- transferDeadMaster:
-			receiveOrdersCh <- order
+		case order := <-transferDeadMaster:
+			messageCount++
+			idInt, _ := strconv.Atoi(id)
+
+			if order.Order.Type == types.Cab {
+				// Send caborders directly by preserving correct ElevatorID
+				ho := types.OrderEnvelope{
+					ElevatorID: order.ElevatorID,
+					Order:      order.Order,
+					CreatedAt:  time.Now(),
+					UpdateNr:   idInt*1000000 + messageCount,
+				}
+
+				sendOrdersCh <- ho
+				pendingOrders[ho.UpdateNr] = ho
+			} else {
+				receiveOrdersCh <- order.Order
+			}
 
 		case state := <-receiveElevatorState:
 			state.ID = id
@@ -64,7 +79,7 @@ func RunSlaveBrain(id string, transferDeadMaster chan types.Order,aliveCh chan s
 			sendOrdersCh <- ho
 			pendingOrders[ho.UpdateNr] = ho
 
-		case <-resendTicker.C:
+		case <-resendTicker.C: // Will only send aliveCh if nothing else going on, might be a problem if there's a lot going on
 			removeTimeouts(pendingOrders)
 			removeTimeouts(pendingFinishedAssignments)
 
@@ -77,8 +92,8 @@ func RunSlaveBrain(id string, transferDeadMaster chan types.Order,aliveCh chan s
 				fmt.Println("Resending Assignment: ", updateNr)
 				sendFinishedAssignmentsCh <- ho
 			}
-		
-			select{
+
+			select {
 			case aliveCh <- struct{}{}:
 			default:
 			}

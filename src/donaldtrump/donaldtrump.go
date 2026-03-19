@@ -28,8 +28,9 @@ type Master struct {
 	data masterData
 
 	// Channels
-	isMasterCh     chan bool
-	transferOrders chan types.Order
+	isMasterCh                          chan bool
+	transferOrdersWhenMasterDowngradeCh chan types.OrderEnvelope
+	forwardOrdersFromBackup             chan types.OrderEnvelope
 
 	calculateAssignmentsCh chan ordermanager.HRAInput
 	rawAssignmentsCh       chan map[string][N_FLOORS][2]bool
@@ -41,6 +42,11 @@ type Master struct {
 	sendAssignmentsCh        chan types.Assignments
 	ackOrderCh               chan types.OrderAck
 	ackAssignmentCompletedCh chan types.FinishedHallAssignmentsAck
+
+	sendBackupDataCh    chan types.BackupData
+	receiveBackupAckCh  chan types.BackupDataAck
+	pendingBackupOrders map[int]pendingAssignment
+	backupUpdateNr      int
 }
 
 type masterData struct {
@@ -51,7 +57,13 @@ type masterData struct {
 	suspendedElevators        map[string]types.SuspendedType
 }
 
-func NewMaster(id string, isMasterCh chan bool, transferMasterOrders chan types.Order) *Master {
+// Should this be moved somewhere else?
+type pendingAssignment struct {
+	assignments map[string][N_FLOORS][2]bool
+	createdAt   time.Time
+}
+
+func NewMaster(id string, isMasterCh chan bool, transferMasterOrders chan types.OrderEnvelope, forwardOrdersFromBAckup chan types.OrderEnvelope) *Master {
 	m := &Master{
 		id:         id,
 		isMasterCh: isMasterCh,
@@ -66,21 +78,27 @@ func NewMaster(id string, isMasterCh chan bool, transferMasterOrders chan types.
 			//timeSinceAssignmentUpdate: [N_FLOORS][2]types.AssignedToAtTime, //TODO - Trenger vi denne? idk, den blir default assigned til "" og jesu fødsel, så i guess det går fint
 		},
 
-		transferOrders: transferMasterOrders,
+		transferOrdersWhenMasterDowngradeCh: transferMasterOrders,
+		forwardOrdersFromBackup:             forwardOrdersFromBAckup,
 
 		//Order calculation
 		calculateAssignmentsCh: make(chan ordermanager.HRAInput),
 		rawAssignmentsCh:       make(chan map[string][N_FLOORS][2]bool, 10),
 
-		//reciving channel
+		//receiving channel
 		updateStreamCh:          make(chan types.ElevatorState),
 		receiveElevatorOrdersCh: make(chan types.OrderEnvelope),
 		completedAssignmentCh:   make(chan types.FinishedHallAssignments),
+		receiveBackupAckCh:      make(chan types.BackupDataAck, 10),
 
 		//Sending channel
 		sendAssignmentsCh:        make(chan types.Assignments),
 		ackAssignmentCompletedCh: make(chan types.FinishedHallAssignmentsAck),
 		ackOrderCh:               make(chan types.OrderAck, 10),
+		sendBackupDataCh:         make(chan types.BackupData, 10),
+
+		// Backup
+		pendingBackupOrders: make(map[int]pendingAssignment),
 	}
 
 	return m
@@ -103,6 +121,9 @@ func (m *Master) Start(masterAliveCh chan struct{}) {
 		m.ackOrderCh,
 	)
 
+	go bcast.Transmitter(config.Cfg.BackupSendPort, m.sendBackupDataCh)
+	go bcast.Receiver(config.Cfg.BackupReceivePort, m.receiveBackupAckCh)
+
 	m.runLoop(masterAliveCh)
 
 }
@@ -110,6 +131,9 @@ func (m *Master) Start(masterAliveCh chan struct{}) {
 func (m *Master) runLoop(aliveCh chan struct{}) {
 	suspensionTicker := time.NewTicker(500 * time.Millisecond)
 	defer suspensionTicker.Stop()
+
+	resendToBackupTicker := time.NewTicker(15 * time.Millisecond) //TODO: Add to config
+	defer resendToBackupTicker.Stop()
 	for {
 		if !m.isMaster {
 			m.drainChannels()
@@ -127,6 +151,8 @@ func (m *Master) runLoop(aliveCh chan struct{}) {
 			}
 
 		case <-suspensionTicker.C:
+			m.removeDeadElevators()
+
 			if m.suspendTimedOutElevators() {
 				m.runReassignment()
 			}
@@ -156,10 +182,61 @@ func (m *Master) runLoop(aliveCh chan struct{}) {
 			}
 
 		case assignments := <-m.rawAssignmentsCh:
-			m.data.unsuspendElevators()
-			m.updateAssignmentTimestamps(assignments)
-			m.sendAssignmentsCh <- types.Assignments{Assignments: m.mergeAssignmentsWithCabRequests(assignments)} // TODO: Rename this channel? Might be inaccurate
+			m.backupUpdateNr++
 
+			m.sendBackupDataCh <- types.BackupData{
+				UpdateNr:     m.backupUpdateNr,
+				HallRequests: m.data.hallRequests,
+				CabRequests:  m.data.cabRequests,
+			}
+
+			m.pendingBackupOrders[m.backupUpdateNr] = pendingAssignment{
+				assignments: assignments,
+				createdAt:   time.Now(),
+			}
+
+		case ack := <-m.receiveBackupAckCh:
+			pending, ok := m.pendingBackupOrders[ack.UpdateNr]
+			if !ok {
+				continue
+			}
+			delete(m.pendingBackupOrders, ack.UpdateNr)
+
+			m.updateAssignmentTimestamps(pending.assignments)
+			m.sendAssignmentsCh <- types.Assignments{Assignments: m.mergeAssignmentsWithCabRequests(pending.assignments)} // TODO: Rename this channel? Might be inaccurate
+
+		case order := <-m.transferOrdersWhenMasterDowngradeCh:
+			hasChanged := m.data.storeOrder(order.Order, order.ElevatorID)
+			if hasChanged {
+				m.runReassignment()
+			}
+
+		case envelope := <-m.forwardOrdersFromBackup:
+			hasChanged := m.data.storeOrder(envelope.Order, envelope.ElevatorID)
+			if hasChanged {
+				m.runReassignment()
+			}
+		case <-resendToBackupTicker.C:
+			for updateNr, pending := range m.pendingBackupOrders {
+				if time.Since(pending.createdAt) > config.Cfg.AckTimeout {
+					// Backup is dead // DANIEL CONTINUE HERE YOU MAFAKKA!!!
+					if len(m.data.states) <= 1 {
+						// No other elevators alive, no backup -> send without backup ack
+						m.sendAssignmentsCh <- types.Assignments{
+							Assignments: m.mergeAssignmentsWithCabRequests(pending.assignments),
+						}
+						delete(m.pendingBackupOrders, updateNr)
+					} else {
+						// Backup should exist -> resend if no ack was received
+						fmt.Println("Backup not acking, resending backup data...")
+						m.sendBackupDataCh <- types.BackupData{
+							UpdateNr:     updateNr,
+							HallRequests: m.data.hallRequests,
+							CabRequests:  m.data.cabRequests,
+						}
+					}
+				}
+			}
 		case elevatorData := <-m.updateStreamCh:
 			// TODO: if message from suspended elevator, unsuspend if elevatordata != from m.data.states[elevatorid]
 			if elevatorData.Floor == -1 { //TODO: Should maybe change this, might be an idea to let the elevatordata be saved but not used for reassignment if between floors
@@ -168,6 +245,18 @@ func (m *Master) runLoop(aliveCh chan struct{}) {
 
 			m.data.states[elevatorData.ID] = elevatorData
 			fmt.Println("Received data from: ", elevatorData.ID)
+		}
+	}
+}
+
+func (m *Master) removeDeadElevators() {
+	for id, state := range m.data.states {
+		if time.Since(state.CreatedAt) > config.Cfg.ElevatorDeadTimeout {
+			fmt.Printf("No state received from elevator %s - removing\n", id)
+			delete(m.data.states, id)
+			//delete(m.data.cabRequests,id) Could probably delete this, per now they are saved two places, which is probably not good, but what can we do...
+			delete(m.data.suspendedElevators, id)
+			m.runReassignment()
 		}
 	}
 }
@@ -280,12 +369,18 @@ func (m *Master) pushOrdersToNewMaster() {
 	for floor := range N_FLOORS {
 		for button := range 2 {
 			if m.data.hallRequests[floor][button] {
-				m.transferOrders <- types.Order{Floor: floor, Type: types.OrderType(button)}
+				m.transferOrdersWhenMasterDowngradeCh <- types.OrderEnvelope{
+					Order: types.Order{Floor: floor, Type: types.OrderType(button)},
+				}
 			}
 		}
-		hallReq := m.data.cabRequests[m.id]
-		if hallReq[floor] {
-			m.transferOrders <- types.Order{Floor: floor, Type: types.Cab}
+		for elevID, cabReq := range m.data.cabRequests {
+			if cabReq[floor] {
+				m.transferOrdersWhenMasterDowngradeCh <- types.OrderEnvelope{
+					ElevatorID: elevID,
+					Order:      types.Order{Floor: floor, Type: types.Cab},
+				}
+			}
 		}
 	}
 }
@@ -337,6 +432,9 @@ func (m *Master) drainChannels() {
 	case <-m.completedAssignmentCh:
 	case <-m.rawAssignmentsCh:
 	case <-m.updateStreamCh:
-		// default: no default, this might be a bug
+	case <-m.transferOrdersWhenMasterDowngradeCh:
+	case <-m.forwardOrdersFromBackup:
+	case <-m.receiveBackupAckCh:
+	// default: no default, this might be a bug
 	}
 }

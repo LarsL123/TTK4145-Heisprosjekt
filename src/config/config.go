@@ -13,9 +13,10 @@ type Config struct {
 	HeartbeatInterval  time.Duration `json:"heartbeatInterval"`
 	HeartbeatTimeout   time.Duration `json:"heartbeatTimeout"`
 
-	SlaveListenPort  int `json:"slaveListenPort"`
-	MasterListenPort int `json:"masterListenPort"`
-	BackupPort       int `json:"backupPort"`
+	SlaveListenPort   int `json:"slaveListenPort"`
+	MasterListenPort  int `json:"masterListenPort"`
+	BackupSendPort    int `json:"backupSendPort"`
+	BackupReceivePort int `json:"backupReceivePort"`
 
 	NewBackupTimeoutTime time.Duration `json:"newBackupTimeoutTime"`
 	NewMasterTimeoutTime time.Duration `json:"newMasterTimeoutTime"`
@@ -30,7 +31,9 @@ type Config struct {
 
 	ResendAssignmentTime time.Duration `json:"resendAssignmentTime"`
 
-	WatchdogTimeout 	time.Duration `json:"watchdogTimeout"`
+	WatchdogTimeout time.Duration `json:"watchdogTimeout"`
+
+	ElevatorDeadTimeout time.Duration `json:"elevatorDeadTimeout"`
 	// N_FLOORS int `json:"nFloors"`
 	// N_BUTTONS int `json:"nButtons"` //TODO: Er dette forksjellige i elevatorManager og orderManager? Isåfall hva gjør man?
 }
@@ -43,9 +46,10 @@ var defaultValues = Config{
 	HeartbeatInterval:  50 * time.Millisecond,  //Change to 15ms
 	HeartbeatTimeout:   500 * time.Millisecond, //Change to 500ms
 
-	SlaveListenPort:  15649,
-	MasterListenPort: 15650,
-	BackupPort:       15651,
+	SlaveListenPort:   15649,
+	MasterListenPort:  15650,
+	BackupSendPort:    15651,
+	BackupReceivePort: 15652,
 
 	AckRetryRate: 200 * time.Millisecond,
 	AckTimeout:   4 * time.Second,
@@ -60,7 +64,10 @@ var defaultValues = Config{
 
 	ResendAssignmentTime: 500 * time.Millisecond,
 
-	WatchdogTimeout: 5*time.Second,
+	WatchdogTimeout: 5 * time.Second,
+
+	ElevatorDeadTimeout: 1 * time.Second, // Maybe need to increas this to more than 10x ElevatorUpdateRate in case of high packetloss
+	
 }
 
 // Load returns the config, falling back to defaults

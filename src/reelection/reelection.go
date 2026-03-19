@@ -21,12 +21,13 @@ type Heartbeat struct {
 	Role Role 
 }
 
-func ReelectionFSM(selfID string, isMasterCh chan bool) {
+func ReelectionFSM(selfID string, isMasterCh chan bool, backupMasterCh chan bool) {
 
 	role := Slave
 
-	masterTimer := time.NewTicker(config.Cfg.NewMasterTimeoutTime)
-	backupTimer := time.NewTicker(config.Cfg.NewBackupTimeoutTime)
+	// Setting this a little bit higher so that startup goes fine
+	masterTimer := time.NewTicker(config.Cfg.NewMasterTimeoutTime*3)
+	backupTimer := time.NewTicker(config.Cfg.NewBackupTimeoutTime*3)
 
 	// Setting up heartbeat
 	heartbeatTicker := time.NewTicker(config.Cfg.HeartbeatInterval)
@@ -36,24 +37,29 @@ func ReelectionFSM(selfID string, isMasterCh chan bool) {
 	go bcast.Receiver(config.Cfg.HeartbeatPort, heartbeatCh)
 
 	startRole := func(r Role) {
-		isMasterCh <- false //Er dette feil sjef?? Ja dette er en bug, kan ende opp med å blocke channels....
-		
-		role = r
+		role = r //Er dette feil sjef?? Ja dette er en bug, kan ende opp med å blocke channels....
 
 		switch r {
 		case Master:
 			fmt.Println("I am master:", selfID)
 			isMasterCh <- true
+			backupMasterCh <- false
 
 		case Backup:
 			fmt.Println("I am backup:", selfID)
+			isMasterCh <- false
+			backupMasterCh <- true
+
 
 		case Slave:
 			fmt.Println("I am slave:", selfID)
+			isMasterCh <- false
+			backupMasterCh <- false
 		}
 	}
 
-	startRole(Slave)
+	role = Slave
+	fmt.Println("I am slave:",selfID)
 
 	for {
 		select {
@@ -81,6 +87,7 @@ func ReelectionFSM(selfID string, isMasterCh chan bool) {
 				if role == Backup {
 					if hb.ID > selfID {
 						fmt.Println("Higher ID backup detected → stepping down")
+						backupTimer.Reset(config.Cfg.NewBackupTimeoutTime * 3)
 						startRole(Slave)
 					}
 				}

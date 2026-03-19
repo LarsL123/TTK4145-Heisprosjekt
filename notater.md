@@ -10,7 +10,7 @@
 * Resend Assignments - check
 * Backup -
 * Reconfiguratiom etter at en heis ble koblet fra (huske gamle caborders) 
-* Process pair - 
+* Process pair - check
 
 Testing:
 * Packet loss

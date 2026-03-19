@@ -43,8 +43,8 @@ var Cfg Config
 var defaultValues = Config{
 	HeartbeatPort:      15647,
 	HeartbeatReplyPort: 15648,
-	HeartbeatInterval:  50 * time.Millisecond,  //Change to 15ms
-	HeartbeatTimeout:   500 * time.Millisecond, //Change to 500ms
+	HeartbeatInterval:  50 * time.Millisecond,
+	HeartbeatTimeout:   500 * time.Millisecond,
 
 	SlaveListenPort:   15649,
 	MasterListenPort:  15650,
@@ -67,7 +67,7 @@ var defaultValues = Config{
 	WatchdogTimeout: 5 * time.Second,
 
 	ElevatorDeadTimeout: 1 * time.Second, // Maybe need to increas this to more than 10x ElevatorUpdateRate in case of high packetloss
-	
+
 }
 
 // Load returns the config, falling back to defaults

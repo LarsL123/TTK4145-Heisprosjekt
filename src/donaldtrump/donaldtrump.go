@@ -160,6 +160,7 @@ func (m *Master) runLoop(aliveCh chan struct{}) {
 				m.runReassignment()
 			}
 
+			//Random placed just have to called.
 			select { // should probably have own ticker if we think they need other ticker rate
 			case aliveCh <- struct{}{}:
 			default:

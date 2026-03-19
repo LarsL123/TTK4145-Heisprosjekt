@@ -45,8 +45,10 @@ func Transmitter(port int, chans ...interface{}) {
 				len(ttj), bufSize, string(ttj)))
 		}
 
-		connLocal.Write(ttj)
-		conn.WriteTo(ttj, addr)
+		_, err := conn.WriteTo(ttj, addr)
+		if err != nil {
+			connLocal.Write(ttj)
+		}
 
 	}
 }

@@ -27,6 +27,8 @@ type Master struct {
 	// State
 	data masterData
 
+	printTimer *time.Timer
+
 	// Channels
 	isMasterCh                          chan bool
 	transferOrdersWhenMasterDowngradeCh chan types.OrderEnvelope
@@ -77,6 +79,8 @@ func NewMaster(id string, isMasterCh chan bool, transferMasterOrders chan types.
 
 			//timeSinceAssignmentUpdate: [N_FLOORS][2]types.AssignedToAtTime, //TODO - Trenger vi denne? idk, den blir default assigned til "" og jesu fødsel, så i guess det går fint
 		},
+
+		printTimer: time.NewTimer(5 * time.Second),
 
 		transferOrdersWhenMasterDowngradeCh: transferMasterOrders,
 		forwardOrdersFromBackup:             forwardOrdersFromBAckup,
@@ -252,7 +256,9 @@ func (m *Master) runLoop(aliveCh chan struct{}) {
 				fmt.Printf("New elevator %s connected -> reassigning", elevatorData.ID)
 				m.runReassignment()
 			}
-			fmt.Println("Received data from: ", elevatorData.ID)
+
+			fmt.Println("Ping from: ", elevatorData.ID)
+
 		}
 	}
 }

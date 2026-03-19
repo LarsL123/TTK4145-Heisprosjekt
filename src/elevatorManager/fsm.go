@@ -42,10 +42,7 @@ func fsm_onInitBetweenFloors() {
 	elevator.behaviour = EB_Moving
 }
 
-// Skal motta requests i form av en array [N_FLOORS][N_BUTTONS]bool
 func fsm_onNewAssignment(requests [N_FLOORS][N_BUTTONS]bool, sendClearedRequests chan []types.Order) {
-	fmt.Printf("Requests updated")
-	//TODO: request sendes videre til donaldtrump, deretter til master
 
 	switch elevator.behaviour {
 	case EB_DoorOpen:
@@ -69,12 +66,11 @@ func fsm_onNewAssignment(requests [N_FLOORS][N_BUTTONS]bool, sendClearedRequests
 		}
 	}
 	fsm_setAllLights()
-	fmt.Println("\nNew state:")
 	elevator_print()
 }
 
 func fsm_onFloorArrival(newFloor int, sendClearedRequests chan []types.Order) {
-	fmt.Printf("Reached new floor: %d", newFloor)
+	fmt.Printf("Reached new floor: %d \n", newFloor)
 	elevator.floor = newFloor
 	elevator_print()
 
@@ -93,7 +89,6 @@ func fsm_onFloorArrival(newFloor int, sendClearedRequests chan []types.Order) {
 	default:
 		break
 	}
-	fmt.Printf("\nNew state:\n")
 	elevator_print()
 }
 
@@ -134,7 +129,7 @@ func fsm_onObstruction(obstruction bool) {
 }
 
 func fsm_onNewButtonRequest(buttonRequest elevio.ButtonEvent, sendOrderCh chan<- types.Order) {
-	fmt.Printf("New %s order on floor %d", buttonToString(buttonRequest.Button), buttonRequest.Floor)
+	fmt.Printf("New %s order on floor %d \n", buttonToString(buttonRequest.Button), buttonRequest.Floor)
 	if elevator.behaviour == EB_DoorOpen && requestShouldClearImmediately(buttonRequest) {
 		doortimer_start()
 	} else {

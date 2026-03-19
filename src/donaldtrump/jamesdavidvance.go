@@ -98,7 +98,7 @@ func RunSlaveBrain(id string, transferDeadMaster chan types.OrderEnvelope, alive
 			default:
 			}
 		case ack := <-hallOrderAck:
-			fmt.Println("Recived ACK for order", ack.UpdateNr)
+			fmt.Println("Received ACK for order", ack.UpdateNr)
 			delete(pendingOrders, ack.UpdateNr)
 
 		case finishedOrders := <-receiveFinishedAssignmentsCh:
@@ -114,12 +114,11 @@ func RunSlaveBrain(id string, transferDeadMaster chan types.OrderEnvelope, alive
 			pendingFinishedAssignments[finishedAssigment.UpdateNr] = finishedAssigment
 
 		case ack := <-finishedAssignmentsAckCh:
-			fmt.Println("Recived ACK for assignemnt", ack.UpdateNr)
+			fmt.Println("Recived ACK for assignment", ack.UpdateNr)
 			delete(pendingFinishedAssignments, ack.UpdateNr)
 
 		case as := <-receiveAssignmentsFromMasterCh:
 			assignments := as.Assignments //Might be an idea to rename struct or something
-			fmt.Println("Received assignments. Doing the work")
 
 			// Send assignments to elevator
 			for floor := range N_FLOORS {

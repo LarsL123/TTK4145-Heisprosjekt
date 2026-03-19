@@ -46,7 +46,6 @@ func ElevatorManager(elevStateCh chan<- types.ElevatorState, sendOrderCh chan ty
 	for {
 		select {
 		case newAssignment := <-receiveAssignmentsCh:
-			fmt.Println("Received Assignment")
 			fsm_onNewAssignment(newAssignment, sendFinishedOrderch)
 
 		case newButtonRequest := <-driverButtonRequestsCh:

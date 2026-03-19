@@ -217,7 +217,7 @@ func (m *Master) roleChange() {
 	} else {
 		m.data.suspendedElevators = make(map[string]types.SuspendedType)
 		m.data.timeSinceAssignmentUpdate = [N_FLOORS][2]types.AssignedToAtTime{}
-		m.runReassignment()
+		//m.runReassignment()
 	}
 }
 
@@ -462,8 +462,8 @@ func (m *Master) drainChannels() {
 	case <-m.completedAssignmentCh:
 	case <-m.rawAssignmentsCh:
 	case <-m.updateStreamCh:
-	case <-m.transferOrdersWhenMasterDowngradeCh:
-	case <-m.forwardOrdersFromBackup:
+	//case <-m.transferOrdersWhenMasterDowngradeCh:
+	//case <-m.forwardOrdersFromBackup:
 	case <-m.receiveBackupAckCh:
 	default:
 	}

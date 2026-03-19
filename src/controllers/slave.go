@@ -170,6 +170,7 @@ func (s *Slave) resendLostPackets() {
 func (s *Slave) handleNewAssignments(as types.Assignments, requests *[N_FLOORS][N_BUTTONS]bool) {
 	// Update local request state
 	for f := 0; f < N_FLOORS; f++ {
+		
 		requests[f][types.HallDown] = as.Assignments[s.id][f][types.HallDown]
 		requests[f][types.HallUp] = as.Assignments[s.id][f][types.HallUp]
 		if as.Assignments[s.id][f][types.Cab] {

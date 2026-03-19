@@ -243,7 +243,14 @@ func (m *Master) runLoop(aliveCh chan struct{}) {
 				continue
 			}
 
+			_, wasKnown := m.data.states[elevatorData.ID]
 			m.data.states[elevatorData.ID] = elevatorData
+
+			if !wasKnown {
+				// New elevator connected -> reassing so it gets its orders
+				fmt.Printf("New elevator %s connected -> reassigning", elevatorData.ID)
+				m.runReassignment()
+			}
 			fmt.Println("Received data from: ", elevatorData.ID)
 		}
 	}
@@ -435,6 +442,6 @@ func (m *Master) drainChannels() {
 	case <-m.transferOrdersWhenMasterDowngradeCh:
 	case <-m.forwardOrdersFromBackup:
 	case <-m.receiveBackupAckCh:
-	// default: no default, this might be a bug
+		// default: no default, this might be a bug
 	}
 }

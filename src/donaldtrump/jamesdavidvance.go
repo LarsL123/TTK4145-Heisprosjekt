@@ -50,6 +50,8 @@ func RunSlaveBrain(id string, transferDeadMaster chan types.OrderEnvelope, alive
 		select {
 
 		case order := <-transferDeadMaster:
+			fmt.Println("Transfering order from dead master", order)
+
 			messageCount++
 			idInt, _ := strconv.Atoi(id)
 

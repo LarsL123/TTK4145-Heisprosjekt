@@ -32,7 +32,6 @@ import (
 	"os/exec"
 	"runtime"
 	"time"
-	// "golang.org/x/text/cases"
 )
 
 // Struct members must be public in order to be accessible by json.Marshal/.Unmarshal
@@ -89,7 +88,6 @@ func ManageOrders(OrdersCh chan HRAInput, AssignmentsCh chan map[string][N_FLOOR
 	}
 
 	for {
-		// Order is received on input channel
 		select {
 		case input := <-OrdersCh:
 			fmt.Println("Calculating orders")
@@ -108,14 +106,12 @@ func ManageOrders(OrdersCh chan HRAInput, AssignmentsCh chan map[string][N_FLOOR
 				continue
 			}
 
-			// JSON -> String
 			jsonBytes, err := json.Marshal(input)
 			if err != nil {
 				fmt.Println("json.Marshal error: ", err)
 				return
 			}
 
-			// Run cost function executable
 			ret, err := exec.Command("./src/ordermanager/"+hraExecutable, "-i", string(jsonBytes)).CombinedOutput()
 			if err != nil {
 				fmt.Println("exec.Command error: ", err)
@@ -125,14 +121,11 @@ func ManageOrders(OrdersCh chan HRAInput, AssignmentsCh chan map[string][N_FLOOR
 
 			output := new(map[string][N_FLOORS][2]bool)
 
-			// Update output map with executable data, String -> JSON
 			err = json.Unmarshal(ret, &output)
 			if err != nil {
 				fmt.Println("json.Unmarshal error: ", err)
 				return
 			}
-
-			// Pass optimal assignments to output channel
 
 			resendticker.Reset(config.Cfg.ResendAssignmentTime)
 			cachedAssignment = *output

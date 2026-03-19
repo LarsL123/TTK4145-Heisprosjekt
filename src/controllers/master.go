@@ -131,29 +131,15 @@ func (m *Master) runLoop(forwardOrdersFromBackup chan types.OrderEnvelope, trans
 
 		if !m.isMaster {
 			m.drainChannels()
-
 			continue
 		}
 
 		select {
 		case m.isMaster = <-m.isMasterCh:
-			if m.isMaster == false { //May be redundant.
-				m.pushOrdersToNewMaster()
-			} else {
-				m.data.suspendedElevators = make(map[string]types.SuspendedType)
-				m.data.timeSinceAssignmentUpdate = [N_FLOORS][2]types.AssignedToAtTime{}
-				m.runReassignment()
-			}
+			m.roleChange()
 
 		case <-suspensionTicker.C:
-			m.removeDeadElevators()
-
-			if m.suspendTimedOutElevators() {
-				m.runReassignment()
-			}
-			if m.data.unsuspendElevators() {
-				m.runReassignment()
-			}
+			m.elevatorSuspension()
 
 			//Random placed just have to called periodically
 			pingProcessPair(masterAliveCh) // should probably have own ticker if we think they need other ticker rate
@@ -176,18 +162,7 @@ func (m *Master) runLoop(forwardOrdersFromBackup chan types.OrderEnvelope, trans
 			}
 
 		case assignments := <-m.rawAssignmentsCh:
-			m.backupUpdateNr++
-
-			m.sendBackupDataCh <- types.BackupData{
-				UpdateNr:     m.backupUpdateNr,
-				HallRequests: m.data.hallRequests,
-				CabRequests:  m.data.cabRequests,
-			}
-
-			m.pendingBackupOrders[m.backupUpdateNr] = pendingAssignment{
-				assignments: assignments,
-				createdAt:   time.Now(),
-			}
+			m.sendToBackup(assignments)
 
 		case ack := <-m.receiveBackupAckCh:
 			pending, ok := m.pendingBackupOrders[ack.UpdateNr]
@@ -211,44 +186,88 @@ func (m *Master) runLoop(forwardOrdersFromBackup chan types.OrderEnvelope, trans
 			if hasChanged {
 				m.runReassignment()
 			}
+
 		case <-resendToBackupTicker.C:
-			for updateNr, pending := range m.pendingBackupOrders {
-				if time.Since(pending.createdAt) > config.Cfg.AckTimeout {
-					// Backup is dead // DANIEL CONTINUE HERE YOU MAFAKKA!!!
-					if len(m.data.states) <= 1 {
-						// No other elevators alive, no backup -> send without backup ack
-						m.sendAssignmentsCh <- types.Assignments{
-							Assignments: m.mergeAssignmentsWithCabRequests(pending.assignments),
-						}
-						delete(m.pendingBackupOrders, updateNr)
-					} else {
-						// Backup should exist -> resend if no ack was received
-						fmt.Println("Backup not acking, resending backup data...")
-						m.sendBackupDataCh <- types.BackupData{
-							UpdateNr:     updateNr,
-							HallRequests: m.data.hallRequests,
-							CabRequests:  m.data.cabRequests,
-						}
-					}
-				}
-			}
-		case elevatorData := <-m.updateStreamCh:
-			// TODO: if message from suspended elevator, unsuspend if elevatordata != from m.data.states[elevatorid]
-			if elevatorData.Floor == -1 { //TODO: Should maybe change this, might be an idea to let the elevatordata be saved but not used for reassignment if between floors
+			m.resendBackupData()
+
+		case newData := <-m.updateStreamCh:
+			if newData.Floor == -1 { //TODO: Should maybe change this, might be an idea to let the elevatordata be saved but not used for reassignment if between floors
 				continue
 			}
+			m.updateMasterDataStates(newData)
+		}
+	}
+}
 
-			_, wasKnown := m.data.states[elevatorData.ID]
-			m.data.states[elevatorData.ID] = elevatorData
+func (m *Master) elevatorSuspension() {
+	m.removeDeadElevators()
 
-			if !wasKnown {
-				// New elevator connected -> reassing so it gets its orders
-				fmt.Printf("New elevator %s connected -> reassigning", elevatorData.ID)
-				m.runReassignment()
+	if m.suspendTimedOutElevators() {
+		m.runReassignment()
+	}
+	if m.data.unsuspendElevators() {
+		m.runReassignment()
+	}
+
+}
+
+func (m *Master) roleChange() {
+	if m.isMaster == false { //May be redundant.
+		m.pushOrdersToNewMaster()
+	} else {
+		m.data.suspendedElevators = make(map[string]types.SuspendedType)
+		m.data.timeSinceAssignmentUpdate = [N_FLOORS][2]types.AssignedToAtTime{}
+		m.runReassignment()
+	}
+}
+
+func (m *Master) updateMasterDataStates(newData types.ElevatorState) {
+	_, wasKnown := m.data.states[newData.ID]
+	m.data.states[newData.ID] = newData
+
+	if !wasKnown {
+		// New elevator connected -> reassing so it gets its orders
+		fmt.Printf("New elevator %s connected -> reassigning", newData.ID)
+		m.runReassignment()
+	}
+
+	fmt.Println("Ping from: ", newData.ID)
+}
+
+func (m *Master) sendToBackup(assignments map[string][4][2]bool) {
+	m.backupUpdateNr++
+
+	m.sendBackupDataCh <- types.BackupData{
+		UpdateNr:     m.backupUpdateNr,
+		HallRequests: m.data.hallRequests,
+		CabRequests:  m.data.cabRequests,
+	}
+
+	m.pendingBackupOrders[m.backupUpdateNr] = pendingAssignment{
+		assignments: assignments,
+		createdAt:   time.Now(),
+	}
+
+}
+
+func (m *Master) resendBackupData() {
+	for updateNr, pending := range m.pendingBackupOrders {
+		if time.Since(pending.createdAt) > config.Cfg.AckTimeout { // Backup is dead
+			if len(m.data.states) <= 1 {
+				// No other elevators alive, no backup -> send without backup ack
+				m.sendAssignmentsCh <- types.Assignments{
+					Assignments: m.mergeAssignmentsWithCabRequests(pending.assignments),
+				}
+				delete(m.pendingBackupOrders, updateNr)
+			} else {
+				// Backup should exist -> resend if no ack was received
+				fmt.Println("Backup not acking, resending backup data...")
+				m.sendBackupDataCh <- types.BackupData{
+					UpdateNr:     updateNr,
+					HallRequests: m.data.hallRequests,
+					CabRequests:  m.data.cabRequests,
+				}
 			}
-
-			fmt.Println("Ping from: ", elevatorData.ID)
-
 		}
 	}
 }

@@ -1,11 +1,8 @@
 package elevatormanager
 
-// Denne modulen skal være inspirert av utdelt single elevator control kode
-
 import (
 	"fmt"
 	"time"
-
 	"elevatorproject/src/config"
 	"elevatorproject/src/elevio"
 	"elevatorproject/src/types"
@@ -13,7 +10,6 @@ import (
 
 const N_FLOORS = 4
 
-// TODO: Lage en config_load funksjon
 const address = "0.0.0.0:15657"
 const N_BUTTONS = 3
 const DOOR_OPEN_DURATION = 3 // [seconds]
@@ -21,7 +17,6 @@ const DOOR_OPEN_DURATION = 3 // [seconds]
 // TODO: vi har en bug i elevatormanager med obstruction. Vi må sjekke obstruction ved init. Hvis ikke så kan heisen når den blir revivet av process pairen begynne å bevege seg selv om den er obstructed.
 
 func ElevatorManager(elevStateCh chan<- types.ElevatorState, sendOrderCh chan types.Order, sendFinishedOrderch chan []types.Order, receiveAssignmentsCh chan [N_FLOORS][N_BUTTONS]bool, receiveLIghtsCh chan [N_FLOORS][N_BUTTONS]bool) {
-	// Spørsmål til studass: er det greit å heller definere elevator på package level, slipper dermed å passe elevator pointer til alle funksjonene som skal endre på den??
 
 	elevio.Init(address, N_FLOORS)
 	elevator_init()

@@ -94,3 +94,44 @@ func Load() {
 		log.Println("Invalid config file, using defaults:", parseErr)
 	}
 }
+
+// import "time"
+
+// const (
+//     // General elevator dimensions
+//     N_FLOORS  = 4
+//     N_BUTTONS = 3
+
+//     // Ports
+//     HeartbeatPort      = 15647
+//     HeartbeatReplyPort = 15648
+//     SlaveListenPort    = 15649
+//     MasterListenPort   = 15650
+//     BackupSendPort     = 15651
+//     BackupReceivePort  = 15652
+
+//     // Timings and Intervals
+//     HeartbeatInterval = 50 * time.Millisecond
+//     HeartbeatTimeout  = 500 * time.Millisecond
+
+//     AckRetryRate = 200 * time.Millisecond
+//     AckTimeout   = 4 * time.Second
+
+//     ElevatorUpdateRate = 200 * time.Millisecond
+
+//     // Suspension and Order Management
+//     // MaxElevatorSuspendTime must be less than MaxOrderSuspendTime to prevent locks
+//     MaxOrderSuspendTime    = 9 * time.Second
+//     MaxElevatorSuspendTime = 5 * time.Second
+//     ResendAssignmentTime   = 500 * time.Millisecond
+//     SupspensionTimer       = 500 * time.Millisecond
+
+//     // Timeout logic
+//     NewBackupTimeoutTime = 500 * time.Millisecond
+//     NewMasterTimeoutTime = 500 * time.Millisecond
+//     WatchdogTimeout      = 5 * time.Second
+//     ElevatorDeadTimeout  = 1 * time.Second
+
+//     // Tickers
+//     ResendToBackupTicker = 15 * time.Millisecond
+// )

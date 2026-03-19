@@ -104,12 +104,10 @@ func (s *Slave) Start(transferDeadMaster chan types.OrderEnvelope, aliveCh chan 
 			s.returnCompletedAssignment(finishedAssignments, &slaveRequests)
 
 		case ack := <-net.hallOrderAck:
-			fmt.Println("Received ACK for order", ack.UpdateNr)
-			delete(s.pendingOrders, ack.UpdateNr)
+			s.clearPendingOrders(ack)
 
 		case ack := <-net.finishedAssignmentsAck:
-			fmt.Println("Recived ACK for assignment", ack.UpdateNr)
-			delete(s.pendingFinishedAssignments, ack.UpdateNr)
+			s.clearPendingCompletedAssignments(ack)
 
 		case <-resendTicker.C:
 			s.resendLostPackets()
@@ -117,6 +115,17 @@ func (s *Slave) Start(transferDeadMaster chan types.OrderEnvelope, aliveCh chan 
 
 		}
 	}
+}
+
+func (s *Slave) clearPendingOrders(ack types.OrderAck) {
+	fmt.Println("Received ACK for order", ack.UpdateNr)
+	delete(s.pendingOrders, ack.UpdateNr)
+}
+
+func (s *Slave) clearPendingCompletedAssignments(ack types.FinishedHallAssignmentsAck) {
+	fmt.Println("Received ACK for assignment", ack.UpdateNr)
+	delete(s.pendingFinishedAssignments, ack.UpdateNr)
+
 }
 
 func (s *Slave) returnCompletedAssignment(orders []types.Order, slaveRequests *[N_FLOORS][N_BUTTONS]bool) {

@@ -5,8 +5,6 @@ import (
 	"elevatorproject/src/types"
 )
 
-//TODO: i guess denne skal ta imot knapperequests og sende de til main
-
 func request_above() bool {
 	for f := elevator.floor + 1; f < N_FLOORS; f++ {
 		for btn := 0; btn < N_BUTTONS; btn++ {
@@ -37,10 +35,6 @@ func request_here() bool {
 	}
 	return false
 }
-
-// func requests_chooseDirection() (elevio.MotorDirection){
-
-// }
 
 func requests_chooseDirection() (elevio.MotorDirection, Behaviour) {
 	switch elevator.dirn {
@@ -79,7 +73,6 @@ func requests_chooseDirection() (elevio.MotorDirection, Behaviour) {
 	}
 }
 
-// int requests_shouldStop(Elevator e) __attribute__((pure));
 func requestsShouldStop() bool {
 	switch elevator.dirn {
 	case elevio.MD_Down:
@@ -97,21 +90,14 @@ func requestsShouldStop() bool {
 
 // NB Side effect: requests på samme heis til samme etasje som heisen er på med dør åpen blir ikke sendt til master
 func requestShouldClearImmediately(buttonRequest elevio.ButtonEvent) bool {
-	//TODO: fix chooseDirection
 	return (elevator.floor == buttonRequest.Floor) && ((elevator.dirn == elevio.MD_Up && buttonRequest.Button == elevio.BT_HallUp) ||
 		(elevator.dirn == elevio.MD_Down && buttonRequest.Button == elevio.BT_HallDown) ||
 		elevator.dirn == elevio.MD_Stop ||
 		buttonRequest.Button == elevio.BT_Cab)
 }
 
-//Lars: Wow for et monster ja. Håper ikke sverre ser den greia her...
-
-// Denne sender per nå også til orderHandler, burde kanskje implementeres i annen kode, men nå er det sånn.
-// Må også cleane opp spaghettikoden.
-func requests_clearAtCurrentFloor(sendClearedRequests chan []types.Order) {
-	// TODO: fix clearatcurrentfloor
+func requests_clearAtCurrentFloor() []types.Order {
 	clearedRequestArray := make([]types.Order, 0)
-	//var clearedRequest elevio.ButtonEvent
 	elevator.requests[elevator.floor][elevio.BT_Cab] = false
 
 	clearedRequestArray = append(clearedRequestArray, types.Order{
@@ -122,39 +108,27 @@ func requests_clearAtCurrentFloor(sendClearedRequests chan []types.Order) {
 	case elevio.MD_Up:
 		if !request_above() && !elevator.requests[elevator.floor][elevio.BT_HallUp] {
 			elevator.requests[elevator.floor][elevio.BT_HallDown] = false
-			clearedRequestArray = append(clearedRequestArray, types.Order{
-				Floor: elevator.floor,
-				Type:  types.HallDown})
+			clearedRequestArray = append(clearedRequestArray, types.Order{Floor: elevator.floor, Type: types.HallDown})
 		}
 
 		elevator.requests[elevator.floor][elevio.BT_HallUp] = false
-		clearedRequestArray = append(clearedRequestArray, types.Order{
-			Floor: elevator.floor,
-			Type:  types.HallUp})
+		clearedRequestArray = append(clearedRequestArray, types.Order{Floor: elevator.floor, Type: types.HallUp})
 	case elevio.MD_Down:
 		if !request_below() && !elevator.requests[elevator.floor][elevio.BT_HallDown] {
 			elevator.requests[elevator.floor][elevio.BT_HallUp] = false
-			clearedRequestArray = append(clearedRequestArray, types.Order{
-				Floor: elevator.floor,
-				Type:  types.HallUp})
+			clearedRequestArray = append(clearedRequestArray, types.Order{Floor: elevator.floor, Type: types.HallUp})
 		}
-		elevator.requests[elevator.floor][elevio.BT_HallDown] = false
 
-		clearedRequestArray = append(clearedRequestArray, types.Order{
-			Floor: elevator.floor,
-			Type:  types.HallDown})
+		elevator.requests[elevator.floor][elevio.BT_HallDown] = false
+		clearedRequestArray = append(clearedRequestArray, types.Order{Floor: elevator.floor, Type: types.HallDown})
 
 	default:
 		elevator.requests[elevator.floor][elevio.BT_HallUp] = false
 		elevator.requests[elevator.floor][elevio.BT_HallDown] = false
 
-		clearedRequestArray = append(clearedRequestArray, types.Order{
-			Floor: elevator.floor,
-			Type:  types.HallUp})
-		clearedRequestArray = append(clearedRequestArray, types.Order{
-			Floor: elevator.floor,
-			Type:  types.HallDown})
+		clearedRequestArray = append(clearedRequestArray, types.Order{Floor: elevator.floor, Type: types.HallUp})
+		clearedRequestArray = append(clearedRequestArray, types.Order{Floor: elevator.floor, Type: types.HallDown})
 	}
 
-	sendClearedRequests <- clearedRequestArray
+	return clearedRequestArray
 }

@@ -6,7 +6,6 @@ import (
 	"fmt"
 )
 
-// TODO: Denne fila skal ha kontroll på FSMen til heisen:)
 var elevator = Elevator{floor: -1,
 	behaviour:        EB_Idle,
 	doorOpenDuration: 3.0,
@@ -58,7 +57,7 @@ func fsm_onNewAssignment(requests [N_FLOORS][N_BUTTONS]bool, sendClearedRequests
 		case EB_DoorOpen:
 			elevio.SetDoorOpenLamp(true)
 			doortimer_start()
-			requests_clearAtCurrentFloor(sendClearedRequests) // Denne sender per nå også til orderHandler, burde kanskje implementeres i annen kode, men nå er det sånn.
+			sendClearedRequests <- requests_clearAtCurrentFloor()
 
 		case EB_Moving:
 			elevio.SetMotorDirection(elevator.dirn)
@@ -81,7 +80,7 @@ func fsm_onFloorArrival(newFloor int, sendClearedRequests chan []types.Order) {
 		if requestsShouldStop() {
 			elevio.SetMotorDirection(elevio.MD_Stop)
 			elevio.SetDoorOpenLamp(true)
-			requests_clearAtCurrentFloor(sendClearedRequests) // Denne sender per nå også til orderHandler, burde kanskje implementeres i annen kode, men nå er det sånn.
+			sendClearedRequests <- requests_clearAtCurrentFloor()
 			doortimer_start()
 			fsm_setAllLights()
 			elevator.behaviour = EB_DoorOpen
@@ -110,7 +109,7 @@ func fsm_onDoorTimeout(sendClearedRequests chan []types.Order) {
 		switch elevator.behaviour {
 		case EB_DoorOpen:
 			doortimer_start()
-			requests_clearAtCurrentFloor(sendClearedRequests) // Denne sender per nå også til orderHandler, burde kanskje implementeres i annen kode, men nå er det sånn.
+			sendClearedRequests <- requests_clearAtCurrentFloor()
 			fsm_setAllLights()
 		case EB_Moving:
 			elevio.SetMotorDirection(elevator.dirn)

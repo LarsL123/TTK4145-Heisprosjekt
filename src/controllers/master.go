@@ -1,4 +1,4 @@
-package donaldtrump
+package controllers
 
 import (
 	"Network-go/network/bcast"
@@ -122,13 +122,6 @@ func (m *Master) Start() {
 
 	m.runLoop()
 
-}
-
-func pingProcessPair(aliveCh chan struct{}) {
-	select {
-	case aliveCh <- struct{}{}:
-	default:
-	}
 }
 
 func (m *Master) runLoop() {
@@ -437,6 +430,13 @@ func (data *masterData) removeOrders(orders []types.Order, elevatorID string) bo
 		}
 	}
 	return hasChanged
+}
+
+func pingProcessPair(aliveCh chan struct{}) {
+	select {
+	case aliveCh <- struct{}{}:
+	default:
+	}
 }
 
 func (m *Master) drainChannels() {

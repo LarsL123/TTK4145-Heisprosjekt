@@ -104,7 +104,7 @@ func requestShouldClearImmediately(buttonRequest elevio.ButtonEvent) bool {
 		buttonRequest.Button == elevio.BT_Cab)
 }
 
-//Lars: Wow for et monster ja. Post birken activity å rydde. 
+//Lars: Wow for et monster ja. Håper ikke sverre ser den greia her...
 
 // Denne sender per nå også til orderHandler, burde kanskje implementeres i annen kode, men nå er det sånn.
 // Må også cleane opp spaghettikoden.
@@ -114,49 +114,47 @@ func requests_clearAtCurrentFloor(sendClearedRequests chan []types.Order) {
 	//var clearedRequest elevio.ButtonEvent
 	elevator.requests[elevator.floor][elevio.BT_Cab] = false
 
-
-
 	clearedRequestArray = append(clearedRequestArray, types.Order{
-		Floor:  elevator.floor,
-		Type: types.Cab})
+		Floor: elevator.floor,
+		Type:  types.Cab})
 
 	switch elevator.dirn {
 	case elevio.MD_Up:
 		if !request_above() && !elevator.requests[elevator.floor][elevio.BT_HallUp] {
 			elevator.requests[elevator.floor][elevio.BT_HallDown] = false
 			clearedRequestArray = append(clearedRequestArray, types.Order{
-				Floor:  elevator.floor,
-				Type: types.HallDown})
+				Floor: elevator.floor,
+				Type:  types.HallDown})
 		}
 
 		elevator.requests[elevator.floor][elevio.BT_HallUp] = false
 		clearedRequestArray = append(clearedRequestArray, types.Order{
-			Floor:  elevator.floor,
-			Type: types.HallUp})
+			Floor: elevator.floor,
+			Type:  types.HallUp})
 	case elevio.MD_Down:
 		if !request_below() && !elevator.requests[elevator.floor][elevio.BT_HallDown] {
 			elevator.requests[elevator.floor][elevio.BT_HallUp] = false
 			clearedRequestArray = append(clearedRequestArray, types.Order{
-				Floor:  elevator.floor,
-				Type: types.HallUp})
+				Floor: elevator.floor,
+				Type:  types.HallUp})
 		}
 		elevator.requests[elevator.floor][elevio.BT_HallDown] = false
 
 		clearedRequestArray = append(clearedRequestArray, types.Order{
-			Floor:  elevator.floor,
-			Type: types.HallDown})
+			Floor: elevator.floor,
+			Type:  types.HallDown})
 
 	default:
 		elevator.requests[elevator.floor][elevio.BT_HallUp] = false
 		elevator.requests[elevator.floor][elevio.BT_HallDown] = false
 
 		clearedRequestArray = append(clearedRequestArray, types.Order{
-			Floor:  elevator.floor,
-			Type: types.HallUp})
+			Floor: elevator.floor,
+			Type:  types.HallUp})
 		clearedRequestArray = append(clearedRequestArray, types.Order{
-			Floor:  elevator.floor,
-			Type: types.HallDown})
+			Floor: elevator.floor,
+			Type:  types.HallDown})
 	}
-	
+
 	sendClearedRequests <- clearedRequestArray
 }

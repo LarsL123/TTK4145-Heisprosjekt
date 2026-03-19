@@ -1,4 +1,4 @@
-package donaldtrump
+package controllers
 
 import (
 	"Network-go/network/bcast"
@@ -18,9 +18,8 @@ func RunBackup(isMasterCh chan bool, forwardOrders chan types.OrderEnvelope) {
 
 	for {
 		select {
-		case data := <-receiveBackupDataCh:
-			savedData = data
-			sendBackupAckCh <- types.BackupDataAck{UpdateNr: data.UpdateNr}
+		case savedData = <-receiveBackupDataCh:
+			sendBackupAckCh <- types.BackupDataAck{UpdateNr: savedData.UpdateNr} //TODO: DANIEL burde denne acke selv om den er slave??
 		case isMaster := <-isMasterCh:
 			if isMaster {
 				pushOrdersToMaster(savedData, forwardOrders)

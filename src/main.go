@@ -24,9 +24,13 @@ func runSystem(id string, masterAliveCh chan struct{}, slaveAliveCh chan struct{
 
 	master := donaldtrump.NewMaster(id, isMasterCh, forwardOrdersFromDead, forwardOrdersFromBackup, masterAliveCh)
 	go master.Start()
-	go reelection.ReelectionFSM(id, isMasterCh, backupMasterCh)
+
+	slave := donaldtrump.NewSlave(id)
+	go slave.Start(id, forwardOrdersFromDead, slaveAliveCh)
+
 	go donaldtrump.RunBackup(backupMasterCh, forwardOrdersFromBackup)
-	go donaldtrump.RunSlaveBrain(id, forwardOrdersFromDead, slaveAliveCh)
+
+	go reelection.ReelectionFSM(id, isMasterCh, backupMasterCh)
 }
 
 func main() {

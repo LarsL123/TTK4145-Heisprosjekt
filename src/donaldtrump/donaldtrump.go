@@ -132,6 +132,13 @@ func (m *Master) Start(masterAliveCh chan struct{}) {
 
 }
 
+func pingProcessPair(aliveCh chan struct{}) {
+	select { // should probably have own ticker if we think they need other ticker rate
+	case aliveCh <- struct{}{}:
+	default:
+	}
+}
+
 func (m *Master) runLoop(aliveCh chan struct{}) {
 	suspensionTicker := time.NewTicker(500 * time.Millisecond)
 	defer suspensionTicker.Stop()
@@ -141,6 +148,7 @@ func (m *Master) runLoop(aliveCh chan struct{}) {
 	for {
 		if !m.isMaster {
 			m.drainChannels()
+			pingProcessPair(aliveCh)
 			continue
 		}
 
@@ -165,10 +173,8 @@ func (m *Master) runLoop(aliveCh chan struct{}) {
 			}
 
 			//Random placed just have to called.
-			select { // should probably have own ticker if we think they need other ticker rate
-			case aliveCh <- struct{}{}:
-			default:
-			}
+			pingProcessPair(aliveCh) // should probably have own ticker if we think they need other ticker rate
+
 		case orderReceived := <-m.receiveElevatorOrdersCh:
 			fmt.Println("Receiving order, sending ack")
 			m.ackOrderCh <- types.OrderAck{UpdateNr: orderReceived.UpdateNr}
